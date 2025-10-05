@@ -1,4 +1,5 @@
 #include "InteractionConfigLoader.h"
+#include <android/log.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -93,7 +94,8 @@ CollisionDetectionPair::Ptr InteractionConfigLoader::GetCollisionPairAt(const in
 	Gesture lGesture = _gestureMapPtr->at(pairJson.at("LGesture").get<std::string>());
 	Gesture rGesture = _gestureMapPtr->at(pairJson.at("RGesture").get<std::string>());
 	CollisionHandler::Ptr handler = _collisionHandlerMapPtr->at(pairJson.at("Handler").get<std::string>())();
-
+    // std::cout << fmt::format("collision: <{}, {}>->{}", obj1DataPtr->name, obj2DataPtr->name, handler->class_name) << std::endl;
+    __android_log_print(ANDROID_LOG_DEBUG, "Collision", "collision pair created: <%s, %s>->%s", obj1DataPtr->name.c_str(), obj2DataPtr->name.c_str(), handler->class_name.c_str());
     return CollisionDetectionPair::create(obj1DataPtr, obj2DataPtr, collisionType, handler, appData, lGesture, rGesture);;
 }
 CollisionData::Ptr InteractionConfigLoader::GetCollisionData(const std::string& fileName, const std::string& filePath, SceneObjectPtr sceneObjectPtr, CollisionBox collisionBox, cv::Vec3f dir) {

@@ -1,5 +1,6 @@
 #include "GestureUnderstanding.h"
 #include <chrono>
+#include <android/log.h>
 
 GestureUnderstanding::GestureUnderstanding() {
     _moduleName = "GestureUnderstanding";
@@ -37,14 +38,23 @@ int GestureUnderstanding::Update(AppData &appData, SceneData &sceneData, FrameDa
     }
     else {
         //更新手势类别
-        frameData->gestureDataPtr->curLGesture = _gesturePredictor.predict(frameData->handPoses[0]);
-        frameData->gestureDataPtr->curRGesture = _gesturePredictor.predict(frameData->handPoses[1]);
+
+        std::vector<HandPose> handPoses;
+        {
+            std::lock_guard<std::mutex> guard(frameData->handPoses_mtx);
+            HandPose handPoses_0 = frameData->handPoses[0];
+            HandPose handPoses_1 = frameData->handPoses[1];
+            handPoses.push_back(handPoses_0);
+            handPoses.push_back(handPoses_1);
+        }
+        frameData->gestureDataPtr->curLGesture = _gesturePredictor.predict(handPoses[0]);
+        frameData->gestureDataPtr->curRGesture = _gesturePredictor.predict(handPoses[1]);
         //更新手关节点模型的位置
 		// TODO: 统一坐标系
         //更新相机变化矩阵
         SceneObject* cam = sceneData.getMainCamera();
         int i = 0;
-        for (HandPose handPose : frameData->handPoses) {
+        for (HandPose handPose : handPoses) {
             for (cv::Vec3f joint : handPose.getjoints()) {
 				cv::Matx44f jointMat = cv::Matx44f::eye();
                 joint *= 1.f;
@@ -73,7 +83,7 @@ int GestureUnderstanding::Update(AppData &appData, SceneData &sceneData, FrameDa
         }
 
         // calculate the velocity of finger tip, we will use it during judging the effects of hand gesture
-        std::array<cv::Vec3f, HandPose::jointNum> joints = frameData->handPoses[1].getjoints();
+        std::array<cv::Vec3f, HandPose::jointNum> joints = handPoses[1].getjoints();
         auto index_mcp = joints[(int)HandJoint::INDEX_FINGER_MCP];
         auto middle_mcp = joints[(int)HandJoint::MIDDLE_FINGER_MCP];
         auto ring_mcp = joints[(int)HandJoint::RING_FINGER_MCP];
@@ -81,19 +91,29 @@ int GestureUnderstanding::Update(AppData &appData, SceneData &sceneData, FrameDa
 
         auto cur_time = std::chrono::steady_clock::now();
         cv::Vec3f cur_finger_tip_position = (index_mcp + middle_mcp + ring_mcp + pinky_mcp) / 4.0f;
-        if (!frameData->getData("last_time").has_value()) {
+        if (sceneData.is_start) {
             // initialize
-            frameData->setData("last_time", cur_time);
-            frameData->setData("last_finger_mcp_position", cur_finger_tip_position);
+            __android_log_print(ANDROID_LOG_DEBUG, "Gesture", "initialize");
+            sceneData.is_start = false;
+            sceneData.last_time = cur_time;
+            sceneData.last_tip_pos = cur_finger_tip_position;
         }
-        std::chrono::steady_clock::time_point last_time = std::any_cast<std::chrono::steady_clock::time_point>(frameData->getData("last_time"));
-        cv::Vec3f last_finger_mcp_position = std::any_cast<cv::Vec3f>(frameData->getData("last_finger_mcp_position"));
-        auto delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - last_time).count(); // ms
-        auto delta_pos = cur_finger_tip_position - last_finger_mcp_position;
+        auto delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - sceneData.last_time).count(); // ms
+        auto delta_pos = cur_finger_tip_position - sceneData.last_tip_pos;
 
-        frameData->setData("tip_velocity", delta_pos / (float)delta_time * 1000.0f); // the velocity of the index finger tip, cv::Vec3f
-        frameData->setData("last_time", cur_time);
-        frameData->setData("last_finger_mcp_position", cur_finger_tip_position);
+        auto v = delta_pos / (float)delta_time * 1000.0f;
+        frameData->tip_velocity = v;
+        if (v.val[2] > 0.09) {
+            if (frameData->gestureDataPtr->curRGesture == Gesture::GRASP)
+                __android_log_print(ANDROID_LOG_DEBUG, "Gesture", "up::Grasp");
+            frameData->tip_movement = "up";
+        }
+        else if (v.val[2] < -0.09){
+//            __android_log_print(ANDROID_LOG_DEBUG, "Gesture", "down");
+            frameData->tip_movement = "down";
+        }
+        sceneData.last_tip_pos = cur_finger_tip_position;
+        sceneData.last_time = cur_time;
     }
     return STATE_OK;
 };

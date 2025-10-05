@@ -56,19 +56,20 @@ namespace MyCollisionHandlers {
                 // get gesture here and set animator state by gesture
                 auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
                 if (cur_right_hand_gesture == Gesture::GRASP) {
-                    auto meta_data = _frameDataPtr->getData("tip_velocity");
-                    assert(meta_data.has_value() == false);
-                    if(std::any_cast<cv::Vec3f>(meta_data).val[1] > 0) {
+                    if(_frameDataPtr->tip_movement == "up") {
                         if (animator->currentStateIndex == animator->allStates.size() - 1) {
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex + 1;
                     }
-                    else {
+                    else if(_frameDataPtr->tip_movement == "down") {
                         if (animator->currentStateIndex == 0){
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex - 1;
+                    }
+                    else {
+                        return;
                     }
                 }
                 if (animator->currentStateIndex != animator->nextStateIndex) {
@@ -138,19 +139,20 @@ namespace MyCollisionHandlers {
                 // get gesture here and set animator state by gesture
                 auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
                 if (cur_right_hand_gesture == Gesture::GRASP) {
-                    auto meta_data = _frameDataPtr->getData("tip_velocity");
-                    assert(meta_data.has_value() == false);
-                    if (std::any_cast<cv::Vec3f>(meta_data).val[1] > 0) {
+                    if (_frameDataPtr->tip_movement == "up") {
                         if (animator->currentStateIndex == animator->allStates.size() - 1) {
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex + 1;
                     }
-                    else {
+                    else if (_frameDataPtr->tip_movement == "down") {
                         if (animator->currentStateIndex == 0) {
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex - 1;
+                    }
+                    else {
+                        return;
                     }
                 }
                 if (animator->currentStateIndex != animator->nextStateIndex) {
@@ -240,19 +242,20 @@ namespace MyCollisionHandlers {
             if (animator->isPlaying == false) {
                 auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
                 if (cur_right_hand_gesture == Gesture::GRASP) {
-                    auto meta_data = _frameDataPtr->getData("tip_velocity");
-                    assert(meta_data.has_value() == false);
-                    if (std::any_cast<cv::Vec3f>(meta_data).val[0] > 0) {
+                    if (_frameDataPtr->tip_movement == "up") {
                         if (animator->currentStateIndex == animator->allStates.size() - 1) {
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex + 1;
                     }
-                    else{
+                    else if (_frameDataPtr->tip_movement == "down") {
                         if (animator->currentStateIndex == 0) {
                             return;
                         }
                         animator->nextStateIndex = animator->currentStateIndex - 1;
+                    }
+                    else {
+                        return;
                     }
                 }
                 if (animator->currentStateIndex != animator->nextStateIndex) {
