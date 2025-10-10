@@ -24,9 +24,6 @@ else()
         endif()
 endif()
 
-# 添加子目录
-#add_subdirectory(${ASSET_PATH})
-
 # 设置库的包含目录
 target_include_directories(InteractiveUnderstanding ${LIB_TYPE} ${INC_PATH})
 
@@ -34,8 +31,6 @@ target_link_libraries(InteractiveUnderstanding ${LIB_TYPE}
         ${GlobalLibs}
         Basic
         cadDataManager
-#        ${CMAKE_CURRENT_SOURCE_DIR}/asset/CADDataManager/Lib/cadDataManager.a
-#        ${CMAKE_CURRENT_SOURCE_DIR}/asset/CADDataManager/Lib/libcurl.a
 )
 
 # 用于向上层传递, link目录以供链接目录

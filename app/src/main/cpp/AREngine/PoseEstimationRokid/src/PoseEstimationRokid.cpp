@@ -36,9 +36,10 @@ void RokidHandPose::set(const XrHandJointLocationEXT *location) {
                 XrMatrix4x4f_CreateTranslationRotationScale(&m, &jointLocation.pose.position, &jointLocation.pose.orientation, &scale);
 
                 glm::mat4 mat = glm::make_mat4((float*)&m);
-                hand_pose[hand].joints[i] = cv::Vec3f(jointLocation.pose.position.x, jointLocation.pose.position.y, jointLocation.pose.position.z);
+                // fix: 20251005-kylee
+                hand_pose[hand].joints[idx] = cv::Vec3f(jointLocation.pose.position.x, jointLocation.pose.position.y, jointLocation.pose.position.z);
+                // end
                 joint_loc.emplace_back(mat);
-
             }
         }
     }
@@ -65,16 +66,22 @@ int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataP
     std::vector<HandPose>& hand_pose = RokidHandPose::instance()->get_hand_pose();
     glm::mat4 relocMatrix = frameDataPtr->jointRelocMatrix;
 
+    // modify: 20251005-kylee
+    std::vector<HandPose> handPoses;
     for(int i = 0; i < hand_pose.size(); i++) {
-        auto& joint = hand_pose[i].joints;
-        for(int j = 0; j < joint.size(); j++) {
-            glm::vec4 pos(joint[j][0], joint[j][1], joint[j][2], 1.0);
-            pos = relocMatrix * pos;
-            joint[j] = cv::Vec3f(pos.x, pos.y, pos.z);
+        auto joints = hand_pose[i].joints;
+        HandPose handPose;
+        for (int j = 0; j < joints.size(); j++) {
+            auto p = relocMatrix * glm::vec4(joints[j].val[0], joints[j].val[1], joints[j].val[2], 1.0f);
+            handPose.joints[j] = cv::Vec3f(p.x, p.y, p.z);
         }
+        handPoses.push_back(handPose);
     }
-
-    frameDataPtr->handPoses = hand_pose;
+    {
+        std::lock_guard<std::mutex> guard(frameDataPtr->handPoses_mtx);
+        frameDataPtr->handPoses = handPoses;
+    }
+    // end
 
     joint_loc = RokidHandPose::instance()->get_joint_loc();
 

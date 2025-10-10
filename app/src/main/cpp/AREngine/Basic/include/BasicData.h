@@ -342,10 +342,15 @@ public:
 
 
     std::vector<Camera> cameras;
+    std::mutex handPoses_mtx; // add: 20251005-kylee
     std::vector<HandPose> handPoses;
     std::vector<BodyPose> bodyPoses;
     std::vector<FacePose> facePoses;
     std::shared_ptr<SerilizedFrame>  serilizedFramePtr;
+
+
+    cv::Vec3f tip_velocity;
+    std::string tip_movement = ""; // valid value: up, down
     
     //指定的帧数据是否已经上传到服务器, key可以是"RGB0","RGB1",...,"Depth0","Depth1",...
     bool hasUploaded(const std::string& key) const;
@@ -376,6 +381,12 @@ public:
     //todo add your variable here
     //各算法单位需根据自己的需求在此新增变量或参数，如新增变量较复杂，可新建一个头文件
     //std::vector<CameraPose> cameraPose;  // zyd
+
+    // add: 250928-kylee
+    std::chrono::steady_clock::time_point last_time;
+    cv::Vec3f last_tip_pos;
+    bool is_start = true;
+    // end
 
     std::vector<std::shared_ptr<CollisionDetectionPair>> collisionPairs;
 
