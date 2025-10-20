@@ -22,7 +22,7 @@ public:
     int GetCollisionPairSize();
     CollisionDetectionPair::Ptr GetCollisionPairAt(const int& index, AppData& appData);
     std::vector<CollisionDetectionPair::Ptr> GetCollisionPairs(AppData& appData);
-	CollisionData::Ptr GetCollisionData(const std::string& fileName, const std::string& filePath, SceneObjectPtr sceneObjectPtr, CollisionBox collisionBox, cv::Vec3f dir);
+	CollisionData::Ptr GetCollisionData(const std::string& fileName, const std::string& filePath, SceneObjectPtr sceneObjectPtr, const std::string& instance, const std::string& instanceID, CollisionBox collisionBox, cv::Vec3f dir, int originStateIndex);
 
     std::unordered_map<std::string, CollisionData::Ptr> collisionDatas;
 private:

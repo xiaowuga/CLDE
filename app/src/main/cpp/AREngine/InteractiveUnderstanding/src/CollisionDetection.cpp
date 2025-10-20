@@ -142,3 +142,17 @@ bool CollisionDetection::_Sphere2AABB(std::shared_ptr<CollisionData> obj1, std::
     return false;
 }
 
+std::vector<float> CollisionDetection::GetBoundingBoxArray(){
+    std::vector<float> bboxArray;
+    for (auto collisionDataPair: _collisionDatas){
+        CollisionData::Ptr collisionDataPtr = collisionDataPair.second;
+        bboxArray.push_back(collisionDataPtr->min[0]);
+        bboxArray.push_back(collisionDataPtr->min[1]);
+        bboxArray.push_back(collisionDataPtr->min[2]);
+        bboxArray.push_back(collisionDataPtr->max[0]);
+        bboxArray.push_back(collisionDataPtr->max[1]);
+        bboxArray.push_back(collisionDataPtr->max[2]);
+    }
+    return bboxArray;
+}
+

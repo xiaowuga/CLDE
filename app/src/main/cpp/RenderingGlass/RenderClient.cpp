@@ -36,9 +36,7 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
     auto scene_virtualObjects = sceneData.getAllObjectsOfType<SceneModel>();
     for(int i = 0; i < scene_virtualObjects.size(); i ++){
-        std::string name = scene_virtualObjects[i]->name;
-        std::string filet_path = scene_virtualObjects[i]->filePath;
-        mModel->loadFbModel(name, filet_path);
+        mModel->loadFbModel(scene_virtualObjects[i]->fileName, scene_virtualObjects[i]->filePath);
     }
 
     mModel->pushMeshFromCustomData();
@@ -93,6 +91,7 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 //    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
     passManager.setPassOrder(passOrder);
 
+    mGizmoPass = std::make_shared<GizmoPass>();
     return STATE_OK;
 }
 
@@ -110,60 +109,53 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     std::string targetState  = "";
 
     //交互需要的接口
-    if(sceneData.actionLock.try_lock()){
-        if(!sceneData.actionPassage.isEmpty()){
-            modelName    = sceneData.actionPassage.modelName;
-            instanceName = sceneData.actionPassage.instanceName;
-            originState  = sceneData.actionPassage.originState;
-            targetState  = sceneData.actionPassage.targetState;
-            //设置活跃模型
-            cadDataManager::DataInterface::setActiveDocumentData(modelName);
-            auto instance = cadDataManager::DataInterface::getInstanceByName(instanceName);
-            instanceId = instance->getId();
-
-            auto animationState = cadDataManager::DataInterface::getAnimationState(modelName, instanceName);
-            std::vector<cadDataManager::AnKeyframe> &anKeyframes = animationState->keyframes;
-            for (auto& anKeyframe : anKeyframes) {
-                if (anKeyframe.originState == originState && anKeyframe.targetState == targetState) {
-                    //TODO 找不到position因为动画Json数据对应关系没做好
-                    positionArray   = anKeyframe.positionArray;
-                    quaternionArray = anKeyframe.quaternionArray;
-                }
-            }
-        } else sceneData.actionLock.unlock();
-    }
-
-    {//测试接口用代码，推力杆会动
-        std::vector<cadDataManager::AnimationActionUnit::Ptr> animationActions = cadDataManager::DataInterface::getAnimationActions("EngineFireAlarm");
-        auto animationAction = animationActions[0];
-        modelName = animationAction->modelName;
-        instanceName = animationAction->instanceName;
-        instanceId = animationAction->instanceId;
-        originState = animationAction->originState;
-        targetState = "3";
-        //加载了多个模型时，需要对ModelName模型执行动画，切换该ModelName为当前活跃状态
+    if(!sceneData.actionPassage.isEmpty()){
+        modelName    = sceneData.actionPassage.modelName;
+        instanceName = sceneData.actionPassage.instanceName;
+        originState  = sceneData.actionPassage.originState;
+        targetState  = sceneData.actionPassage.targetState;
+        instanceId = sceneData.actionPassage.instanceId;
+        //设置活跃模型
         cadDataManager::DataInterface::setActiveDocumentData(modelName);
-        auto instance = cadDataManager::DataInterface::getInstanceByName(instanceName);
-        instanceId = instance->getId();
-
-        cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationStateByName(modelName, instanceName);
-//    cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationState(modelName, instanceId);
-        std::vector<cadDataManager::AnKeyframe> anKeyframes = animationState->keyframes;
+        auto animationState = cadDataManager::DataInterface::getAnimationStateByName(modelName, instanceName);
+        std::vector<cadDataManager::AnKeyframe> &anKeyframes = animationState->keyframes;
         for (auto& anKeyframe : anKeyframes) {
             if (anKeyframe.originState == originState && anKeyframe.targetState == targetState) {
                 //TODO 找不到position因为动画Json数据对应关系没做好
-                positionArray = anKeyframe.positionArray;
+                positionArray   = anKeyframe.positionArray;
                 quaternionArray = anKeyframe.quaternionArray;
             }
         }
     }
 
+//    {//测试接口用代码，推力杆会动
+//        std::vector<cadDataManager::AnimationActionUnit::Ptr> animationActions = cadDataManager::DataInterface::getAnimationActions("EngineFireAlarm");
+//        auto animationAction = animationActions[0];
+//        modelName = animationAction->modelName;
+//        instanceName = animationAction->instanceName;
+//        instanceId = animationAction->instanceId;
+//        originState = animationAction->originState;
+//        targetState = "3";
+//        //加载了多个模型时，需要对ModelName模型执行动画，切换该ModelName为当前活跃状态
+//        cadDataManager::DataInterface::setActiveDocumentData(modelName);
+//        auto instance = cadDataManager::DataInterface::getInstanceByName(instanceName);
+//        instanceId = instance->getId();
+//
+//        cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationStateByName(modelName, instanceName);
+////    cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationState(modelName, instanceId);
+//        std::vector<cadDataManager::AnKeyframe> anKeyframes = animationState->keyframes;
+//        for (auto& anKeyframe : anKeyframes) {
+//            if (anKeyframe.originState == originState && anKeyframe.targetState == targetState) {
+//                //TODO 找不到position因为动画Json数据对应关系没做好
+//                positionArray = anKeyframe.positionArray;
+//                quaternionArray = anKeyframe.quaternionArray;
+//            }
+//        }
+//    }
+
     //调用位姿变换接口，实时更新模型位置
-    if (positionArray.size() == 0) {
-        spdlog::error("未找到positionArray");
-        LOGI("未找到positionArray");
-    }
-    else{
+    if (positionArray.size() != 0) {
+        LOGI("找到positionArray");
         actionFrame ++;
 //        LOGI("%i", actionFrame);
         std::vector<float> position   = { positionArray[actionFrame * 3], positionArray[actionFrame * 3 + 1], positionArray[actionFrame * 3 + 2] };
@@ -196,6 +188,8 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     }
 
     mModel->render(project,view,model_trans_mat);
+    mGizmoPass->updateBoundingBOX(boundingBoxArray);
+    mGizmoPass->render(project, view);
     mPbrPass->render(project, view, joc);
 
 

@@ -192,6 +192,7 @@ add_library(openxr_demo MODULE
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/renderShader.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/renderMesh.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/renderModel.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/GizmoPass.cpp
 )
 
 

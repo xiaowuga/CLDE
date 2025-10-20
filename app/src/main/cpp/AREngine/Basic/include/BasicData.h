@@ -12,6 +12,7 @@
 #include "PoseUtils.h"
 #include "glm/detail/type_mat.hpp"
 #include "glm/glm.hpp"
+#include "log.h"
 
 
 /**
@@ -176,14 +177,13 @@ public:
     }
 
 
-    std::string  name;
-
-    std::string  filePath;
+    std::string  name;//"xxxx"
+    std::string  fileName;//"xxxx.fb"
+    std::string  filePath;//"path/to"
 
     Pose         initTransform; //模型初始变换(重定位后)
 
     Pose         transform; //从初始变换到当前状态的变换
-
 
     // virtual void Init() = 0;
     virtual void Init(){
@@ -250,9 +250,10 @@ public:
     std::string instanceName;
     std::string originState;
     std::string targetState;
+    std::string instanceId;
 
     bool isEmpty(){
-        if( this->modelName.empty() && this->instanceName.empty() && this->originState.empty() && this->targetState.empty()){
+        if( this->modelName.empty() && this->instanceName.empty() && this->originState.empty() && this->targetState.empty() && this->instanceId.empty()){
             return true;
         } else return false;
     }
@@ -262,6 +263,7 @@ public:
         this->instanceName.clear();
         this->originState.clear();
         this->targetState.clear();
+        this->instanceId.clear();
     }
 
 };
@@ -636,7 +638,10 @@ enum CollisionBox{
  */
 class CollisionData {
 public:
-    std::string name = "";
+    std::string modelName = "";
+    std::string instanceName = "";
+    std::string instanceId = "";
+    int originStateIndex = 0;
     cv::Vec3f max = cv::Vec3f(0,0,0);
     cv::Vec3f min = cv::Vec3f(0,0,0);
     cv::Vec3f center = cv::Vec3f(0,0,0);

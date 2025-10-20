@@ -256,13 +256,21 @@ void CollisionData::SetBox() {
     }
 }
 void CollisionData::_SetAABB() {
-    cv::Matx44f matrix = this->obj->transform.GetMatrix();
-    cv::Vec4f tmp = matrix * cv::Vec4f(center[0], center[1], center[2], 1);
-    this->center = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
-    tmp = matrix * cv::Vec4f(max[0], max[1], max[2], 1);
-    this->max = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
-    tmp = matrix * cv::Vec4f(min[0], min[1], min[2], 1);
-    this->min = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
+    if(this->obj->name.find("HandNode")!=std::string::npos){
+        cv::Matx44f translate = this->obj->transform.GetMatrix() * this->obj->initTransform.GetMatrix();
+        cv::Vec3f pos = cv::Vec3f(translate(0, 3), translate(1, 3), translate(2, 3));
+        this->center = pos;
+        this->max = this->center + this->extents * this->_curExtentsRatio;
+        this->min = this->center - this->extents * this->_curExtentsRatio;
+    }else {
+        cv::Matx44f matrix = this->obj->transform.GetMatrix();
+        cv::Vec4f tmp = matrix * cv::Vec4f(center[0], center[1], center[2], 1);
+        this->center = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
+        tmp = matrix * cv::Vec4f(max[0], max[1], max[2], 1);
+        this->max = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
+        tmp = matrix * cv::Vec4f(min[0], min[1], min[2], 1);
+        this->min = cv::Vec3f(tmp[0], tmp[1], tmp[2]);
+    }
 }
 void CollisionData::_SetRay() {
     cv::Matx44f matrix = this->obj->transform.GetMatrix();
@@ -293,7 +301,10 @@ CollisionDetectionPair::CollisionDetectionPair(std::shared_ptr<CollisionData> ob
 
 void CollisionDetectionPair::SetColliding(bool isColliding, SceneData& sceneData){
     _isColliding = isColliding;
-    if(_isColliding && _frameDataPtr->gestureDataPtr->curLGesture == _lGesture && _frameDataPtr->gestureDataPtr->curRGesture == _rGesture){
+    if(_isColliding
+    && (_frameDataPtr->gestureDataPtr->curLGesture == _lGesture || _lGesture == Gesture::UNDEFINED)
+    && (_frameDataPtr->gestureDataPtr->curRGesture == _rGesture || _rGesture == Gesture::UNDEFINED)
+    ){
         _handler->OnCollision(_obj1, _obj2, _frameDataPtr, _appDataPtr, sceneData);
     }
 }

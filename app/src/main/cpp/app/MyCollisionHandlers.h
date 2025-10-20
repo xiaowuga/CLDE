@@ -11,7 +11,8 @@
 #include "InteractionConfigLoader.h"
 #include "Animator.h"
 #include "AnimationPlayer.h"
-
+#define LOG_TAG "MyCollisionHandlers.h"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 namespace MyCollisionHandlers {
 #define MakeMyCollisionHandler(__CLASS_NAME__)                                      \
     std::shared_ptr<Animator::Animator> animator = nullptr;                         \
@@ -33,238 +34,366 @@ namespace MyCollisionHandlers {
         last_trigger_time = cur_time;                                               \
         return (float)t / 1000.0f;                                                  \
     }
-
-
-    class Stick : public CollisionHandler {
+    class Stick : public CollisionHandler{
     public:
         MakeMyCollisionHandler(Stick)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
-            std::cout << "Collision detected between " << obj1->name << " and " << obj2->name << std::endl;
-
+            LOGI("Collision detected between %s and %s", obj1->modelName.c_str(), obj2->modelName.c_str());
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
-            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
-            animator = animation_player->findAnimator(obj2->name);
-            if (animator == nullptr) {
-                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
-                animator = std::make_shared<Animator::Animator>(
-                        0, obj2->obj, appDataPtr->dataDir + "InstanceState.json");
-                animation_player->addAnimator(obj2->name, animator);
+            //TODO:让渲染模块控制动画播放速度
+            if(!animationPlaying){
+                currentStateIndex = obj2->originStateIndex;
             }
-            if (animator->isPlaying == false) {
-                // get gesture here and set animator state by gesture
-                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
-                if (cur_right_hand_gesture == Gesture::GRASP) {
-                    if(_frameDataPtr->tip_movement == "up") {
-                        if (animator->currentStateIndex == animator->allStates.size() - 1) {
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex + 1;
-                    }
-                    else if(_frameDataPtr->tip_movement == "down") {
-                        if (animator->currentStateIndex == 0){
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex - 1;
-                    }
-                    else {
-                        return;
-                    }
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+            int allSateSize = animationSate->allStates.size();
+            // get gesture here and set animator state by gesture
+            auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            if (cur_right_hand_gesture == Gesture::GRASP) {
+                if(_frameDataPtr->tip_velocity[0] > 0.09){
+                    targetStateIndex = currentStateIndex + 1;
+                    targetStateIndex = targetStateIndex > allSateSize - 1 ? allSateSize - 1 : targetStateIndex;
+                }else if(_frameDataPtr->tip_velocity[0] < -0.09){
+                    targetStateIndex = currentStateIndex - 1;
+                    targetStateIndex = targetStateIndex < 0 ? 0 : targetStateIndex;
                 }
-                if (animator->currentStateIndex != animator->nextStateIndex) {
-                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
-                    animator->isPlaying = true;
-                    animator->animationSequenceIndex = 0;
-                }
+            }
+            if(currentStateIndex != targetStateIndex){
+                animationPlaying = true;
+                // 将交互动作传递到渲染模块
+                sceneData.actionPassage.modelName = obj2->modelName;
+                sceneData.actionPassage.instanceName = obj2->instanceName;
+                sceneData.actionPassage.originState = animationSate->allStates[currentStateIndex];
+                sceneData.actionPassage.targetState = animationSate->allStates[targetStateIndex];
+                sceneData.actionPassage.instanceId = obj2->instanceId;
+                currentStateIndex = targetStateIndex;
             }
         }
+    private:
+        bool animationPlaying = false;
+        int currentStateIndex = 0;
+        int targetStateIndex = 0;
     };
 
     class Button : public CollisionHandler {
     public:
         MakeMyCollisionHandler(Button)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
-            std::cout << "Collision detected between " << obj1->name << " and " << obj2->name << std::endl;
+            std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
 
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
-            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
-            animator = animation_player->findAnimator(obj2->name);
-            if (animator == nullptr) {
-                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
-                animator = std::make_shared<Animator::Animator>(
-                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
-                animation_player->addAnimator(obj2->name, animator);
+//            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
+//            animator = animation_player->findAnimator(obj2->modelName);
+//            if (animator == nullptr) {
+//                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
+//                animator = std::make_shared<Animator::Animator>(
+//                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
+//                animation_player->addAnimator(obj2->modelName, animator);
+//            }
+//            if (animator->isPlaying == false) {
+//                // get gesture here and set animator state by gesture
+//                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+//                if (cur_right_hand_gesture == Gesture::CURSOR) {
+//                    animator->nextStateIndex = (animator->currentStateIndex + 1) % animator->allStates.size();
+//                }
+//                if (animator->currentStateIndex != animator->nextStateIndex) {
+//                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
+//                    animator->isPlaying = true;
+//                    animator->animationSequenceIndex = 0;
+//                }
+//            }
+            if(!animationPlaying){
+                currentStateIndex = obj2->originStateIndex;
             }
-            if (animator->isPlaying == false) {
-                // get gesture here and set animator state by gesture
-                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
-                if (cur_right_hand_gesture == Gesture::CURSOR) {
-                    animator->nextStateIndex = (animator->currentStateIndex + 1) % animator->allStates.size();
-                }
-                if (animator->currentStateIndex != animator->nextStateIndex) {
-                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
-                    animator->isPlaying = true;
-                    animator->animationSequenceIndex = 0;
-                }
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+            int allSateSize = animationSate->allStates.size();
+            // get gesture here and set animator state by gesture
+            auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            if (cur_right_hand_gesture == Gesture::CURSOR) {
+                targetStateIndex = (currentStateIndex + 1) % allSateSize;
+            }
+            if(currentStateIndex != targetStateIndex){
+                animationPlaying = true;
+                // 将交互动作传递到渲染模块
+                sceneData.actionPassage.modelName = obj2->modelName;
+                sceneData.actionPassage.instanceName = obj2->instanceName;
+                sceneData.actionPassage.originState = animationSate->allStates[currentStateIndex];
+                sceneData.actionPassage.targetState = animationSate->allStates[targetStateIndex];
+                sceneData.actionPassage.instanceId = obj2->instanceId;
+                currentStateIndex = targetStateIndex;
             }
         }
-
+    private:
+        bool animationPlaying = false;
+        int currentStateIndex = 0;
+        int targetStateIndex = 0;
     };
 
     class ProtectiveCover : public CollisionHandler {
     public:
         MakeMyCollisionHandler(ProtectiveCover)
         bool is_open() {
-            return animator->allStates[animator->currentStateIndex] == "OPEN";
+            //return animator->allStates[animator->currentStateIndex] == "OPEN";
+            return animationState->allStates[currentStateIndex] == "OPEN";
         }
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
-            std::cout << "Collision detected between " << obj1->name << " and " << obj2->name
+            std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName
                       << std::endl;
 
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
-            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
-            animator = animation_player->findAnimator(obj2->name);
-            if (animator == nullptr) {
-                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
-                animator = std::make_shared<Animator::Animator>(
-                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
-                animation_player->addAnimator(obj2->name, animator);
+//            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
+//            animator = animation_player->findAnimator(obj2->modelName);
+//            if (animator == nullptr) {
+//                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
+//                animator = std::make_shared<Animator::Animator>(
+//                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
+//                animation_player->addAnimator(obj2->modelName, animator);
+//            }
+//            if (animator->isPlaying == false) {
+//                // get gesture here and set animator state by gesture
+//                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+//                if (cur_right_hand_gesture == Gesture::GRASP) {
+//                    if (_frameDataPtr->tip_movement == "up") {
+//                        if (animator->currentStateIndex == animator->allStates.size() - 1) {
+//                            return;
+//                        }
+//                        animator->nextStateIndex = animator->currentStateIndex + 1;
+//                    }
+//                    else if (_frameDataPtr->tip_movement == "down") {
+//                        if (animator->currentStateIndex == 0) {
+//                            return;
+//                        }
+//                        animator->nextStateIndex = animator->currentStateIndex - 1;
+//                    }
+//                    else {
+//                        return;
+//                    }
+//                }
+//                if (animator->currentStateIndex != animator->nextStateIndex) {
+//                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
+//                    animator->isPlaying = true;
+//                    animator->animationSequenceIndex = 0;
+//                }
+//            }
+            if(!animationPlaying){
+                currentStateIndex = obj2->originStateIndex;
             }
-            if (animator->isPlaying == false) {
-                // get gesture here and set animator state by gesture
-                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
-                if (cur_right_hand_gesture == Gesture::GRASP) {
-                    if (_frameDataPtr->tip_movement == "up") {
-                        if (animator->currentStateIndex == animator->allStates.size() - 1) {
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex + 1;
-                    }
-                    else if (_frameDataPtr->tip_movement == "down") {
-                        if (animator->currentStateIndex == 0) {
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex - 1;
-                    }
-                    else {
-                        return;
-                    }
+            animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+            int allSateSize = animationState->allStates.size();
+            // get gesture here and set animator state by gesture
+            auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            if (cur_right_hand_gesture == Gesture::GRASP) {
+                if(_frameDataPtr->tip_velocity[0] > 0.02){
+                    targetStateIndex = currentStateIndex + 1;
+                    targetStateIndex = targetStateIndex > allSateSize - 1 ? allSateSize - 1 : targetStateIndex;
+                }else if(_frameDataPtr->tip_velocity[0] < -0.02){
+                    targetStateIndex = currentStateIndex - 1;
+                    targetStateIndex = targetStateIndex < 0 ? 0 : targetStateIndex;
                 }
-                if (animator->currentStateIndex != animator->nextStateIndex) {
-                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
-                    animator->isPlaying = true;
-                    animator->animationSequenceIndex = 0;
-                }
+            }
+            if(currentStateIndex != targetStateIndex){
+                animationPlaying = true;
+                // 将交互动作传递到渲染模块
+                sceneData.actionPassage.modelName = obj2->modelName;
+                sceneData.actionPassage.instanceName = obj2->instanceName;
+                sceneData.actionPassage.originState = animationState->allStates[currentStateIndex];
+                sceneData.actionPassage.targetState = animationState->allStates[targetStateIndex];
+                sceneData.actionPassage.instanceId = obj2->instanceId;
+                currentStateIndex = targetStateIndex;
             }
         }
+    private:
+        cadDataManager::AnimationStateUnit::Ptr animationState = nullptr;
+        bool animationPlaying = false;
+        int currentStateIndex = 0;
+        int targetStateIndex = 0;
     };
 
     class ButtonUnderCover : public CollisionHandler {
     public:
         MakeMyCollisionHandler(ButtonUnderCover)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
-            std::cout << "Collision detected between " << obj1->name << " and " << obj2->name << std::endl;
+            std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
 
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
-            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
-            animator = animation_player->findAnimator(obj2->name);
-            if (animator == nullptr) {
-                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
-                animator = std::make_shared<Animator::Animator>(
-                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
-                animation_player->addAnimator(obj2->name, animator);
+//            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
+//            animator = animation_player->findAnimator(obj2->modelName);
+//            if (animator == nullptr) {
+//                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
+//                animator = std::make_shared<Animator::Animator>(
+//                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
+//                animation_player->addAnimator(obj2->modelName, animator);
+//            }
+//            if (animator->isPlaying == false) {
+//                // get gesture here and set animator state by gesture
+//                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+//                if (cur_right_hand_gesture == Gesture::CURSOR) {
+//                    // find the corresponding protective cover's collision handler
+//                    // obj2_name: xxxxx<k>, then the corresponding protective cover should be named: xxxxx-G<k>
+//                    auto obj2_name = obj2->modelName;
+//                    size_t pos = obj2_name.find('<');
+//                    if (pos == std::string::npos) {
+//                        throw std::invalid_argument("Sample name format invalid: missing <k>");
+//                    }
+//                    std::string prefix = obj2_name.substr(0, pos);
+//                    std::string suffix = obj2_name.substr(pos);
+//                    std::string protective_cover_name = prefix + "-G" + suffix;
+//                    ProtectiveCover::Ptr protective_cover = nullptr;
+//                    for (auto pair : sceneData.collisionPairs) {
+//                        if (pair->GetObj2()->modelName == protective_cover_name) {
+//                            assert(pair->GetHandler()->class_name != "ProtectiveCover");
+//                            protective_cover = std::static_pointer_cast<ProtectiveCover>(pair->GetHandler());
+//                        }
+//                    }
+//                    if (protective_cover == nullptr) {
+//                        throw std::runtime_error("Cannot find corresponding ProtectiveCover for: " + obj2_name);
+//                    }
+//                    if (!protective_cover->is_open()) {
+//                        return;
+//                    }
+//                    else {
+//                        animator->nextStateIndex =
+//                                (animator->currentStateIndex + 1) % animator->allStates.size();
+//                    }
+//                }
+//                if (animator->currentStateIndex != animator->nextStateIndex) {
+//                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
+//                    animator->isPlaying = true;
+//                    animator->animationSequenceIndex = 0;
+//                }
+//            }
+            if(!animationPlaying){
+                currentStateIndex = obj2->originStateIndex;
             }
-            if (animator->isPlaying == false) {
-                // get gesture here and set animator state by gesture
-                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
-                if (cur_right_hand_gesture == Gesture::CURSOR) {
-                    // find the corresponding protective cover's collision handler
-                    // obj2_name: xxxxx<k>, then the corresponding protective cover should be named: xxxxx-G<k>
-                    auto obj2_name = obj2->name;
-                    size_t pos = obj2_name.find('<');
-                    if (pos == std::string::npos) {
-                        throw std::invalid_argument("Sample name format invalid: missing <k>");
-                    }
-                    std::string prefix = obj2_name.substr(0, pos);
-                    std::string suffix = obj2_name.substr(pos);
-                    std::string protective_cover_name = prefix + "-G" + suffix;
-                    ProtectiveCover::Ptr protective_cover = nullptr;
-                    for (auto pair : sceneData.collisionPairs) {
-                        if (pair->GetObj2()->name == protective_cover_name) {
-                            assert(pair->GetHandler()->class_name != "ProtectiveCover");
-                            protective_cover = std::static_pointer_cast<ProtectiveCover>(pair->GetHandler());
-                        }
-                    }
-                    if (protective_cover == nullptr) {
-                        throw std::runtime_error("Cannot find corresponding ProtectiveCover for: " + obj2_name);
-                    }
-                    if (!protective_cover->is_open()) {
-                        return;
-                    }
-                    else {
-                        animator->nextStateIndex =
-                                (animator->currentStateIndex + 1) % animator->allStates.size();
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+            int allSateSize = animationSate->allStates.size();
+            // get gesture here and set animator state by gesture
+            auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            if (cur_right_hand_gesture == Gesture::CURSOR) {
+                // find the corresponding protective cover's collision handler
+                // obj2_instanceName: xxxxx<k>, then the corresponding protective cover instance should be named: xxxxx-G<k>
+                auto obj2_instanceName = obj2->instanceName;
+                size_t pos = obj2_instanceName.find('<');
+                if (pos == std::string::npos) {
+                    throw std::invalid_argument("Sample name format invalid: missing <k>");
+                }
+                std::string prefix = obj2_instanceName.substr(0, pos);
+                std::string suffix = obj2_instanceName.substr(pos);
+                std::string protective_cover_name = prefix + "-G" + suffix;
+                ProtectiveCover::Ptr protective_cover = nullptr;
+                for (auto pair : sceneData.collisionPairs) {
+                    if (pair->GetObj2()->instanceName == protective_cover_name) {
+                        assert(pair->GetHandler()->class_name == "ProtectiveCover");
+                        protective_cover = std::static_pointer_cast<ProtectiveCover>(pair->GetHandler());
                     }
                 }
-                if (animator->currentStateIndex != animator->nextStateIndex) {
-                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
-                    animator->isPlaying = true;
-                    animator->animationSequenceIndex = 0;
+                if (protective_cover == nullptr) {
+                    throw std::runtime_error("Cannot find corresponding ProtectiveCover for: " + obj2_instanceName);
                 }
+                if (!protective_cover->is_open()) {
+                    return;
+                }
+                else {
+                    targetStateIndex = (currentStateIndex + 1) % allSateSize;
+                }
+            }
+            if(currentStateIndex != targetStateIndex){
+                animationPlaying = true;
+                // 将交互动作传递到渲染模块
+                sceneData.actionPassage.modelName = obj2->modelName;
+                sceneData.actionPassage.instanceName = obj2->instanceName;
+                sceneData.actionPassage.originState = animationSate->allStates[currentStateIndex];
+                sceneData.actionPassage.targetState = animationSate->allStates[targetStateIndex];
+                sceneData.actionPassage.instanceId = obj2->instanceId;
+                currentStateIndex = targetStateIndex;
             }
         }
+    private:
+        bool animationPlaying = false;
+        int currentStateIndex = 1;
+        int targetStateIndex = 1;
     };
 
     class Dial : public CollisionHandler {
     public:
         MakeMyCollisionHandler(Dial)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
-            std::cout << "Collision detected between " << obj1->name << " and " << obj2->name << std::endl;
+            std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
 
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
-            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
-            animator = animation_player->findAnimator(obj2->name);
-            if (animator == nullptr) {
-                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
-                animator = std::make_shared<Animator::Animator>(
-                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
-                animation_player->addAnimator(obj2->name, animator);
+//            auto animation_player = std::any_cast<std::shared_ptr<AnimationPlayer>>(appDataPtr->getData("AnimationPlayer"));
+//            animator = animation_player->findAnimator(obj2->modelName);
+//            if (animator == nullptr) {
+//                // make a new animator referring to the obj2, which is stored in appData->sceneObjects
+//                animator = std::make_shared<Animator::Animator>(
+//                        0, obj2->obj, appDataPtr->dataDir + "/InstanceState.json");
+//                animation_player->addAnimator(obj2->modelName, animator);
+//            }
+//            if (animator->isPlaying == false) {
+//                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+//                if (cur_right_hand_gesture == Gesture::GRASP) {
+//                    if (_frameDataPtr->tip_movement == "up") {
+//                        if (animator->currentStateIndex == animator->allStates.size() - 1) {
+//                            return;
+//                        }
+//                        animator->nextStateIndex = animator->currentStateIndex + 1;
+//                    }
+//                    else if (_frameDataPtr->tip_movement == "down") {
+//                        if (animator->currentStateIndex == 0) {
+//                            return;
+//                        }
+//                        animator->nextStateIndex = animator->currentStateIndex - 1;
+//                    }
+//                    else {
+//                        return;
+//                    }
+//                }
+//                if (animator->currentStateIndex != animator->nextStateIndex) {
+//                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
+//                    animator->isPlaying = true;
+//                    animator->animationSequenceIndex = 0;
+//                }
+//            }
+            if(!animationPlaying){
+                currentStateIndex = obj2->originStateIndex;
             }
-            if (animator->isPlaying == false) {
-                auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
-                if (cur_right_hand_gesture == Gesture::GRASP) {
-                    if (_frameDataPtr->tip_movement == "up") {
-                        if (animator->currentStateIndex == animator->allStates.size() - 1) {
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex + 1;
-                    }
-                    else if (_frameDataPtr->tip_movement == "down") {
-                        if (animator->currentStateIndex == 0) {
-                            return;
-                        }
-                        animator->nextStateIndex = animator->currentStateIndex - 1;
-                    }
-                    else {
-                        return;
-                    }
+            auto animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+            int allSateSize = animationState->allStates.size();
+            // get gesture here and set animator state by gesture
+            auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            //if (cur_right_hand_gesture == Gesture::ZOOM) {
+                if(_frameDataPtr->tip_velocity[1] < -0.002){
+                    targetStateIndex = currentStateIndex + 1;
+                    targetStateIndex = targetStateIndex > allSateSize - 1 ? allSateSize - 1 : targetStateIndex;
+                }else if(_frameDataPtr->tip_velocity[1] > 0.002){
+                    targetStateIndex = currentStateIndex - 1;
+                    targetStateIndex = targetStateIndex < 0 ? 0 : targetStateIndex;
                 }
-                if (animator->currentStateIndex != animator->nextStateIndex) {
-                    animator->LoadAnimationForStateChange(animator->allStates[animator->currentStateIndex], animator->allStates[animator->nextStateIndex]);
-                    animator->isPlaying = true;
-                    animator->animationSequenceIndex = 0;
-                }
+            //}
+            if(currentStateIndex != targetStateIndex){
+                animationPlaying = true;
+                // 将交互动作传递到渲染模块
+                sceneData.actionPassage.modelName = obj2->modelName;
+                sceneData.actionPassage.instanceName = obj2->instanceName;
+                sceneData.actionPassage.originState = animationState->allStates[currentStateIndex];
+                sceneData.actionPassage.targetState = animationState->allStates[targetStateIndex];
+                sceneData.actionPassage.instanceId = obj2->instanceId;
+                currentStateIndex = targetStateIndex;
             }
         }
+    private:
+        bool animationPlaying = false;
+        int currentStateIndex = 0;
+        int targetStateIndex = 0;
     };
 }
 
