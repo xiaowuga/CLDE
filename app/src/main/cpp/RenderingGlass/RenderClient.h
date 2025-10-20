@@ -23,6 +23,7 @@
 #include "RenderingGlass/shadowMappingDepthPass.h"
 #include "RenderingGlass/SSAOGeometryPass.h"
 #include "RenderingGlass/SSAOPass.h"
+#include "RenderingGlass/GizmoPass.h"
 
 class RenderClient : public ARModule {
 private:
@@ -37,12 +38,13 @@ private:
     std::shared_ptr<SSAOGeometryPass> mSSAOGeometryPass;
     std::shared_ptr<SSAOPass> mSSAOPass;
     std::shared_ptr<renderModel> mModel; // for test
+    std::shared_ptr<GizmoPass> mGizmoPass;
     int actionFrame = -1;
     std::vector<float> positionArray;
     std::vector<float> quaternionArray;
 
 public:
-
+    std::vector<float> boundingBoxArray;
     std::vector<glm::mat4> joc;
     glm::mat4 project;
     glm::mat4 view;

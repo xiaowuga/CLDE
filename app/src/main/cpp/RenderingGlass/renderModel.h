@@ -62,7 +62,7 @@ public:
             for( int i : meshID ){
                 auto mesh = mMeshes->at(std::to_string(i));
 //                mMeshes->at(std::to_string(i)).mTransformVector = std::move(transform[k]);
-                LOGI("%i",mesh.mVertices.size());
+                //LOGI("%i",mesh.mVertices.size());
                 mesh.mTransformVector = std::move(transform[k]);
                 mesh.setupMesh();
                 mMeshes->erase(std::to_string(i));

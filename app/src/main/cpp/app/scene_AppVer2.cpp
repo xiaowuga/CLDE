@@ -66,28 +66,28 @@ namespace {
         // we need to store this pointer in appData, we will use it when we want to set a new animator
         appData->setData("AnimationPlayer", ptr);
 
-        nlohmann::json instances_info_json;
-        std::ifstream json_file(appData->dataDir + "InstanceInfo.json");
-        json_file >> instances_info_json;
-        // [ {"instanceId": string, "name": string, "matrixWorld": [float]}, {...}, ...]
-        for (int i = 0; i < instances_info_json.size(); i++) {
-            auto instance_info_json = instances_info_json[i];
-            std::string object_name = instance_info_json.at("name").get<std::string>();
-
-            std::vector<float> model_mat = instance_info_json.at(
-                    "matrixWorld").get<std::vector<float>>();
-            if (model_mat.size() != 16) {
-                std::cout << "number of elements in model matrix does not equal to 16!" << std::endl;
-            }
-            cv::Matx44f model_mat_cv;
-            std::copy(model_mat.begin(), model_mat.begin() + 16, model_mat_cv.val);
-            std::string model_name = prase_path(object_name);
-            std::string mesh_file_name = appData->dataDir + "Models/" + model_name + "/" + model_name + ".obj";
-            Pose transform(model_mat_cv);
-            Pose initTransform(cv::Matx44f::eye());
-            SceneObjectPtr ptr = std::make_shared<SceneObject>(object_name, mesh_file_name,initTransform, transform);
-            sceneData->setObject(object_name, ptr);
-        }
+//        nlohmann::json instances_info_json;
+//        std::ifstream json_file(appData->dataDir + "InstanceInfo.json");
+//        json_file >> instances_info_json;
+//        // [ {"instanceId": string, "name": string, "matrixWorld": [float]}, {...}, ...]
+//        for (int i = 0; i < instances_info_json.size(); i++) {
+//            auto instance_info_json = instances_info_json[i];
+//            std::string object_name = instance_info_json.at("name").get<std::string>();
+//
+//            std::vector<float> model_mat = instance_info_json.at(
+//                    "matrixWorld").get<std::vector<float>>();
+//            if (model_mat.size() != 16) {
+//                std::cout << "number of elements in model matrix does not equal to 16!" << std::endl;
+//            }
+//            cv::Matx44f model_mat_cv;
+//            std::copy(model_mat.begin(), model_mat.begin() + 16, model_mat_cv.val);
+//            std::string model_name = prase_path(object_name);
+//            std::string mesh_file_name = appData->dataDir + "Models/" + model_name + "/" + model_name + ".obj";
+//            Pose transform(model_mat_cv);
+//            Pose initTransform(cv::Matx44f::eye());
+//            SceneObjectPtr ptr = std::make_shared<SceneObject>(object_name, mesh_file_name,initTransform, transform);
+//            sceneData->setObject(object_name, ptr);
+//        }
 
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
                                                 "di7", "di8", "Marker", "monitaijia",
@@ -96,12 +96,13 @@ namespace {
                                                 "zhongyou", "zhongzuo", "zhongzuo1"};
 
         for(int i = 0; i < model_list.size(); i++) {
-            std::string model_name = model_list[i] + ".fb";
+            std::string model_name = model_list[i];
             Pose transform(cv::Matx44f::eye());
             Pose initTransform(cv::Matx44f::eye());
             std::string mesh_file_path = appData->dataDir + "Models";
             auto ptr = std::make_shared<SceneModel>();
             ptr->name = model_name;
+            ptr->fileName = model_name + ".fb";
             ptr->filePath = mesh_file_path;
 
             sceneData->setObject(model_name, ptr);
@@ -144,12 +145,16 @@ namespace {
                     std::vector<glm::mat4> &joc = poseEstimationRokidPtr->get_joint_loc();
                     Rendering->joc = joc;
                 }
+                std::shared_ptr<CollisionDetection> collisionDetectionPtr = std::static_pointer_cast<CollisionDetection>(_eng->getModule("CollisionDetection"));
+                if(collisionDetectionPtr != nullptr) {
+                    Rendering->boundingBoxArray = collisionDetectionPtr->GetBoundingBoxArray();
+                }
                 auto& frameDataPtr = _eng->frameData;
                 if(frameDataPtr) {
                     Rendering->project = project;
                     Rendering->view = view * frameDataPtr->viewRelocMatrix;
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
-                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
+                    //infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }
