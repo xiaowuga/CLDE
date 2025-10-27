@@ -232,11 +232,13 @@ void main()
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-    vec3 ambient = (kD * diffuse + specular) * ao;
+    //vec3 ambient = (kD * diffuse + specular) * ao;
+    vec3 ambient = (kD * diffuse + specular);
 
     //shadow mapping use
     // calculate shadow
     float shadow = ShadowCalculation(FragPosLightSpace);
+    shadow = 0.0f;
     vec3 color = (1.0 - shadow * 0.5) * ambient + Lo;
 
     // HDR tonemapping

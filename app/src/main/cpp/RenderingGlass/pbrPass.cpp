@@ -95,9 +95,9 @@ void PbrPass::initShader() {
 }
 
 void PbrPass::draw() {
-//    GL_CALL(glFrontFace(GL_CCW));
-//    GL_CALL(glCullFace(GL_BACK));
-//    GL_CALL(glEnable(GL_CULL_FACE));
+    GL_CALL(glFrontFace(GL_CCW));
+    GL_CALL(glCullFace(GL_BACK));
+    GL_CALL(glEnable(GL_CULL_FACE));
 //    GL_CALL(glEnable(GL_DEPTH_TEST));
 //    GL_CALL(glEnable(GL_BLEND));
 //    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -253,12 +253,14 @@ bool PbrPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m)
 }
 
 void PbrPass::render(const glm::mat4& p, const glm::mat4& v, const std::vector<glm::mat4>& m) {
-    renderShader sphereShader;
-    std::vector<char> vertexShaderCode = readFileFromAssets("shaders/sphere.vert");
-    vertexShaderCode.push_back('\0');
-    std::vector<char> fragmentShaderCode = readFileFromAssets("shaders/sphere.frag");
-    fragmentShaderCode.push_back('\0');
-    sphereShader.loadShader(vertexShaderCode.data(), fragmentShaderCode.data());
+    if(!isInitHand){
+        std::vector<char> vertexShaderCode = readFileFromAssets("shaders/sphere.vert");
+        vertexShaderCode.push_back('\0');
+        std::vector<char> fragmentShaderCode = readFileFromAssets("shaders/sphere.frag");
+        fragmentShaderCode.push_back('\0');
+        sphereShader.loadShader(vertexShaderCode.data(), fragmentShaderCode.data());
+        isInitHand = true;
+    }
     sphereShader.use();
     sphereShader.setUniformMat4("projection", p);
     sphereShader.setUniformMat4("view", v);

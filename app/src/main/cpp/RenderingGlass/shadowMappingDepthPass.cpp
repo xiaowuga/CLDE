@@ -101,7 +101,7 @@ void ShadowMappingDepthPass::initShader() {
 
 }
 bool ShadowMappingDepthPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm::mat4 &m) {
-#if 1
+#if 0
     // render
     // ------
 //    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

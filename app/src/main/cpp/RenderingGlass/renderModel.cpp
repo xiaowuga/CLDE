@@ -276,13 +276,13 @@ renderMesh renderModel::processMesh(aiMesh* mesh, const aiScene* scene) {
 
 
 renderMesh renderModel::createMeshFromCustomData(const std::vector<glm::vec3> &positions,
-                                           const std::vector<glm::vec3> &normals,
-                                           const std::vector<glm::vec2> &uvs,
-                                           const std::vector<uint32_t> &indices,
-                                           const pbrMaterial &material,
-                                           const std::string &materialName, const bool &isActive,
-                                           int transformNum,
-                                           std::vector<float> transformVector) {
+                                                 const std::vector<glm::vec3> &normals,
+                                                 const std::vector<glm::vec2> &uvs,
+                                                 const std::vector<uint32_t> &indices,
+                                                 const pbrMaterial &material,
+                                                 const std::string &materialName, const bool &isActive,
+                                                 int transformNum,
+                                                 std::vector<float> transformVector) {
     std::vector<renderVertex> vertices;
     std::vector<unsigned int> meshIndices;
     std::vector<renderTexture> textures;
@@ -399,7 +399,7 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
             protoId.insert(std::pair<std::string, std::vector<int>>(
                     name,
                     tempInt
-                    ));
+            ));
             lastProtoSize = verticesVector.size();
         }
         name = it->first;
@@ -458,7 +458,8 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
                 pbrMaterial.aoMapId = 0;
 
 
-            }else if(testcolor == "BBBBBB" || testcolor == "333333")
+            }
+            else if(testcolor == "BBBBBB" || testcolor == "333333")
             {
                 // diffuse gray board
                 pbrMaterial.albedoValue = {0.2f, 0.2f, 0.2f};
@@ -482,7 +483,8 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
                 pbrMaterial.aoMapId = 0;
 
 
-            }else if(testcolor == "FF0000")
+            }
+            else if(testcolor == "FF0000")
             {
                 //plastic red board
                 pbrMaterial.albedoValue = {1.0f, 0.0f, 0.0f};
@@ -506,7 +508,8 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
                 pbrMaterial.aoMapId = 0;
 
 
-            }else
+            }
+            else
             {
                 // yellow words and lines
                 pbrMaterial.albedoValue = {1.0f, 1.0f, 1.0f};
@@ -531,7 +534,6 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
 
 
             }
-
 
             if (type == "mesh")
             {
@@ -755,4 +757,3 @@ bool renderModel::loadLocalModel(const std::string &modelFileName, const std::st
     }
     return true;
 }
-

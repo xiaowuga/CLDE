@@ -54,6 +54,9 @@ private:
     glm::vec3 lightPositions[4];
     glm::vec3 lightColors[4];
 
+    renderShader sphereShader;
+    bool isInitHand = false;
+
     void renderMeasure(const glm::mat4 &p, const glm::mat4 &v, const glm::mat4 &m);
 
     void renderMeasure();

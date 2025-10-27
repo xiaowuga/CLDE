@@ -42,6 +42,11 @@ private:
     int actionFrame = -1;
     std::vector<float> positionArray;
     std::vector<float> quaternionArray;
+    int frameCount = 0;
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<float>> startTime;
+    float fps;
+    int width = 1920;
+    int height = 1080;
 
 public:
     std::vector<float> boundingBoxArray;
@@ -64,6 +69,24 @@ public:
     int Update(AppData& appData, SceneData& sceneData, FrameDataPtr frameDataPtr) override;
 
     int ShutDown(AppData& appData, SceneData& sceneData) override;
+
+    void updateFrameCount();
+
+    float getFps(){
+        return fps;
+    }
+
+    int getWidth(){
+        return width;
+    }
+
+    int getHeight(){
+        return height;
+    }
+
+    int getIndiceSum(){
+        return mModel->getIndiceSum();
+    }
 
 };
 

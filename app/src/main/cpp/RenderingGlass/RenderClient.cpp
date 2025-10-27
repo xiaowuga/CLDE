@@ -40,6 +40,7 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
     }
 
     mModel->pushMeshFromCustomData();
+    mModel->countIndiceSum();
 
     //加载模型的动画数据：Action + State
     cadDataManager::DataInterface::loadAnimationActionData(appData.animationActionConfigFile);
@@ -91,12 +92,14 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 //    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
     passManager.setPassOrder(passOrder);
 
+    startTime = std::chrono::high_resolution_clock::now();
+
     mGizmoPass = std::make_shared<GizmoPass>();
     return STATE_OK;
 }
 
 int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr frameDataPtr) {
-    LOGI("RenderClient update");;
+//    LOGI("RenderClient update");;
     glm::mat4 mProject = project;
     glm::mat4 mView = view;
 
@@ -192,6 +195,10 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     mGizmoPass->render(project, view);
     mPbrPass->render(project, view, joc);
 
+    updateFrameCount();
+    auto testNum = getFps();
+    testNum = getIndiceSum();
+    testNum = getFps();
 
     return STATE_OK;
 }
@@ -210,4 +217,28 @@ int RenderClient::ShutDown(AppData& appData, SceneData& sceneData) {
 }
 
 void RenderClient::PreCompute(std::string configPath) {
+}
+
+void RenderClient::updateFrameCount() {
+
+    // 增量帧计数器
+    frameCount++;
+
+    // 计算经过的时间
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> elapsedTime = currentTime - startTime;
+
+    // 检查是否已过一秒
+    if (elapsedTime.count() >= 1.0f)
+    {
+        // 计算 FPS
+        fps = frameCount / elapsedTime.count();
+
+        // 将FPS输出到控制台
+        std::cout << "FPS: " << fps << std::endl;
+
+        // 下一秒重置
+        frameCount = 0;
+        startTime = currentTime;
+    }
 }

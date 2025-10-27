@@ -32,6 +32,7 @@ public:
     std::vector<int> transformNumVector;
     std::vector<bool> isTextureVector;
     std::unordered_map<std::string, int> meshIndice;
+    int indiceSum = 0;
 
     std::string& name();
 
@@ -62,7 +63,7 @@ public:
             for( int i : meshID ){
                 auto mesh = mMeshes->at(std::to_string(i));
 //                mMeshes->at(std::to_string(i)).mTransformVector = std::move(transform[k]);
-                //LOGI("%i",mesh.mVertices.size());
+                LOGI("%i",mesh.mVertices.size());
                 mesh.mTransformVector = std::move(transform[k]);
                 mesh.setupMesh();
                 mMeshes->erase(std::to_string(i));
@@ -99,6 +100,17 @@ public:
                                         const std::vector<uint32_t> &indices, const pbrMaterial &material,
                                         const std::string &materialName, const bool &isActive, int i,
                                         std::vector<float> vector);
+
+    void countIndiceSum(){
+        indiceSum = 0;
+        for(auto& i : indicesVector){
+            indiceSum += i.size() / 3;
+        }
+    }
+
+    int getIndiceSum(){
+        return indiceSum;
+    }
 
 
 private:
