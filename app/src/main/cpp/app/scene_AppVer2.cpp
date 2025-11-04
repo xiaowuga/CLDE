@@ -105,7 +105,7 @@ namespace {
             ptr->name = model_name;
             ptr->fileName = model_name + ".fb";
             ptr->filePath = mesh_file_path;
-
+            cadDataManager::DataInterface::parseLocalModel( model_name + ".fb", mesh_file_path);
             sceneData->setObject(model_name, ptr);
         }
 
