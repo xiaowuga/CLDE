@@ -371,7 +371,8 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
 
 //std::string fliepath = MakeSdcardPath("/Download/sphere.fb");
 //    std::string  filePath = modelFileName;
-    cadDataManager::DataInterface::parseLocalModel(file_name, file_path);
+//    cadDataManager::DataInterface::parseLocalModel(file_name, file_path);
+    cadDataManager::DataInterface::setActiveDocumentData(file_name);
 //    std::vector<cadDataManager::RenderInfo> renderInfoArray = cadDataManager::DataInterface::getRenderInfo();
 //    cadDataManager::RenderInfo renderInfo = renderInfoArray[0];
 

@@ -36,7 +36,7 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
     auto scene_virtualObjects = sceneData.getAllObjectsOfType<SceneModel>();
     for(int i = 0; i < scene_virtualObjects.size(); i ++){
-        mModel->loadFbModel(scene_virtualObjects[i]->fileName, scene_virtualObjects[i]->filePath);
+        mModel->loadFbModel(scene_virtualObjects[i]->name, scene_virtualObjects[i]->filePath);
     }
 
     mModel->pushMeshFromCustomData();
