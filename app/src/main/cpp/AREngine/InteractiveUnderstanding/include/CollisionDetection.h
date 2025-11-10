@@ -23,6 +23,7 @@ public:
     void AddCollisionHandler(CollisionHandler* handler);
     void RemoveCollisionHandler(CollisionHandler* handler);
     std::vector<float> GetBoundingBoxArray();
+    std::unordered_map<std::string, std::vector<float>> GetBoundingBoxMap();
 private:
     std::unordered_map<std::string,CollisionData::Ptr> _collisionDatas;
     bool _isColliding(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, CollisionType type);

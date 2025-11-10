@@ -44,6 +44,13 @@ void BoundingBOX::updateExtents(const std::vector<float> &vertices) {
         extents[i] = vertices[i];
     }
 }
+void BoundingBOX::updateBox(const std::string& name, const std::vector<float>& vertices){
+    if(vertices.size() < 6) return;
+    for(size_t i=0;i<6;i++){
+        extents[i] = vertices[i];
+    }
+    instanceName = name;
+}
 void BoundingBOX::draw(const glm::mat4 &mvp) {
     // 定义包围盒的 8 个顶点
     float minx = extents[0];
@@ -114,6 +121,34 @@ void GizmoPass::updateBoundingBOX(std::vector<float>& vertices){
         boxes[i].updateExtents(boxVertices);
     }
 }
+
+void GizmoPass::initBoundingBoxMap(std::unordered_map<std::string, std::vector<float>>& map){
+    boxes.clear();
+    for(auto it : map){
+        BoundingBOX box;
+        box.updateBox(it.first, it.second);
+        boxes.push_back(box);
+    }
+}
+
+void GizmoPass::updateBoundingBoxMap(std::string instanceName, std::vector<float> &point){
+    for(int i = 0; i < boxes.size(); i++){
+        if(boxes[i].instanceName == instanceName)
+        {
+            boxes[i].updateExtents(point);
+        }
+    }
+}
+
+std::vector<float> GizmoPass::getBoxArray(std::string instanceName){
+    for(int i = 0; i < boxes.size(); i++){
+        if(boxes[i].instanceName == instanceName)
+        {
+            return boxes[i].extents;
+        }
+    }
+}
+
 bool GizmoPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m){
     for(auto box:boxes){
         glm::mat4 mvp = p * v * m;
@@ -121,6 +156,8 @@ bool GizmoPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& 
     }
     return true;
 }
+
 void GizmoPass::render(const glm::mat4& p, const glm::mat4& v){
     render(p, v, glm::mat4(1.0f));
 }
+

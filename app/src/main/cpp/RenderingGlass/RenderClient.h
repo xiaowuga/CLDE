@@ -50,6 +50,7 @@ private:
 
 public:
     std::vector<float> boundingBoxArray;
+    std::unordered_map<std::string, std::vector<float>> boundingBoxMap;
     std::vector<glm::mat4> joc;
     glm::mat4 project;
     glm::mat4 view;

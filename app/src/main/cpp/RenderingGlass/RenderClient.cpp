@@ -95,6 +95,7 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
     startTime = std::chrono::high_resolution_clock::now();
 
     mGizmoPass = std::make_shared<GizmoPass>();
+    mGizmoPass->initBoundingBoxMap(boundingBoxMap);
     return STATE_OK;
 }
 
@@ -166,6 +167,8 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
         std::vector<float> matrix     = cadDataManager::DataInterface::composeMatrix(position, quaternion);
         std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel = cadDataManager::DataInterface::modifyInstanceMatrix(instanceId, matrix);//零件实例位置的修改
 
+//        std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel = cadDataManager::DataInterface::modifyInstanceColor(instanceId, "#FF0000");//零件实例位置的修改
+
 //        mModel->getMMeshes().at(modifyModel.begin()->first).mTransformVector = modifyModel.begin()->second.begin()->matrix;
 
         std::string meshName = modifyModel.begin()->first;
@@ -179,6 +182,42 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
         }
 //        auto &meshTransform = modifyModel.begin()->second.begin()->matrix;
         mModel->updateMMesh(meshName, meshTransform);
+
+//        auto originArray = mGizmoPass->getBoxArray(meshName);
+//        glm::vec3 center = {
+//                (originArray[0] + originArray[3]) / 2,
+//                (originArray[1] + originArray[4]) / 2,
+//                (originArray[2] + originArray[5]) / 2
+//        };
+//
+//        glm::vec3 translation = {
+//
+//        };
+//
+//
+//        // 伪代码
+//        // 计算当前中心点
+//        Point3D currentCenter = {
+//                (min.x + max.x) * 0.5f,
+//                (min.y + max.y) * 0.5f,
+//                (min.z + max.z) * 0.5f
+//        };
+//
+//        // 计算平移向量
+//        Point3D translation = {
+//                center.x - currentCenter.x,
+//                center.y - currentCenter.y,
+//                center.z - currentCenter.z
+//        };
+//
+//        // 应用平移
+//        min.x += translation.x;
+//        min.y += translation.y;
+//        min.z += translation.z;
+//
+//        max.x += translation.x;
+//        max.y += translation.y;
+//        max.z += translation.z;
 
         if((actionFrame * 3 + 3) == positionArray.size()){
             actionFrame = -1;
@@ -241,4 +280,8 @@ void RenderClient::updateFrameCount() {
         frameCount = 0;
         startTime = currentTime;
     }
+}
+
+std::vector<float> countCenter(){
+
 }

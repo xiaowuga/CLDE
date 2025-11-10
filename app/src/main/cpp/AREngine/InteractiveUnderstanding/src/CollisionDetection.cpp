@@ -13,7 +13,7 @@ void CollisionDetection::PreCompute(std::string configPath){
 }
 int CollisionDetection::Init(AppData& appData, SceneData& sceneData, FrameDataPtr frameDataPtr){
     // 加载交互配置文件
-	InteractionConfigLoader::Ptr interactionConfigPtr = InteractionConfigLoader::create(sceneData, appData.dataDir +  appData.interactionConfigFile);
+    InteractionConfigLoader::Ptr interactionConfigPtr = InteractionConfigLoader::create(sceneData, appData.dataDir +  appData.interactionConfigFile);
     // 添加碰撞检测对到frameData的collisionPairs中
     std::vector<CollisionDetectionPair::Ptr> collisionPairs =  interactionConfigPtr->GetCollisionPairs(appData);
     sceneData.collisionPairs = collisionPairs;
@@ -33,7 +33,7 @@ int CollisionDetection::Update(AppData &appData, SceneData& sceneData, FrameData
         } else{
             pairPtr->SetColliding(false, sceneData);
         }
-		//TODO: Only for test
+        //TODO: Only for test
         //pairPtr->SetColliding(true);
     }
     return STATE_OK;
@@ -154,5 +154,22 @@ std::vector<float> CollisionDetection::GetBoundingBoxArray(){
         bboxArray.push_back(collisionDataPtr->max[2]);
     }
     return bboxArray;
+}
+
+
+std::unordered_map<std::string, std::vector<float>> CollisionDetection::GetBoundingBoxMap(){
+    std::unordered_map<std::string, std::vector<float>> mBoundingBoxMap;
+    for (auto collisionDataPair: _collisionDatas){
+        std::vector<float> bboxArray;
+        CollisionData::Ptr collisionDataPtr = collisionDataPair.second;
+        bboxArray.push_back(collisionDataPtr->min[0]);
+        bboxArray.push_back(collisionDataPtr->min[1]);
+        bboxArray.push_back(collisionDataPtr->min[2]);
+        bboxArray.push_back(collisionDataPtr->max[0]);
+        bboxArray.push_back(collisionDataPtr->max[1]);
+        bboxArray.push_back(collisionDataPtr->max[2]);
+        mBoundingBoxMap.insert(std::pair<std::string, std::vector<float>>(collisionDataPtr->instanceName, bboxArray));
+    }
+    return mBoundingBoxMap;
 }
 
