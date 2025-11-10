@@ -149,6 +149,7 @@ namespace {
                 std::shared_ptr<CollisionDetection> collisionDetectionPtr = std::static_pointer_cast<CollisionDetection>(_eng->getModule("CollisionDetection"));
                 if(collisionDetectionPtr != nullptr) {
                     Rendering->boundingBoxArray = collisionDetectionPtr->GetBoundingBoxArray();
+                    Rendering->boundingBoxMap = collisionDetectionPtr->GetBoundingBoxMap();
                 }
                 auto& frameDataPtr = _eng->frameData;
                 if(frameDataPtr) {

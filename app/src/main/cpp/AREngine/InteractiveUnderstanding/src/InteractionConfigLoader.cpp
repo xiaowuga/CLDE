@@ -100,7 +100,8 @@ CollisionData::Ptr InteractionConfigLoader::GetCollisionData(const std::string& 
 	std::string format = fileName.substr(fileName.find_last_of(".") + 1);
     if (format == "fb") {
         //转换本地flatBuffer模型
-        cadDataManager::DataInterface::parseLocalModel(fileName, filePath);
+//        cadDataManager::DataInterface::parseLocalModel(fileName, filePath);
+        cadDataManager::DataInterface::setActiveDocumentData(fileName.substr(0, fileName.find_last_of('.')));
         std::string instanceName = instance;
         std::string instanceId = instanceID;
         //取得实例信息
