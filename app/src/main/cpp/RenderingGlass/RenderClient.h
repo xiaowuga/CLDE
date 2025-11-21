@@ -88,6 +88,17 @@ public:
         return mModel->getIndiceSum();
     }
 
+    // 导出渲染结果的功能
+    bool exportRenderResult(const std::string& outputPath);
+    
+    // 设置是否启用自动导出（每N帧导出一次）
+    void enableAutoExport(bool enable, int intervalFrames = 30);
+
+private:
+    bool autoExportEnabled = false;
+    int exportInterval = 30;
+    int framesSinceLastExport = 0;
+
 };
 
 

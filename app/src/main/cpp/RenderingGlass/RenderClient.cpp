@@ -200,6 +200,21 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     testNum = getIndiceSum();
     testNum = getFps();
 
+    // 自动导出渲染结果（如果启用）
+    if (autoExportEnabled) {
+        framesSinceLastExport++;
+        if (framesSinceLastExport >= exportInterval) {
+            // 生成带时间戳的文件名
+            auto now = std::chrono::system_clock::now();
+            auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()).count();
+            std::string filename = "/storage/emulated/0/Download/render_" + 
+                                 std::to_string(timestamp) + ".png";
+            exportRenderResult(filename);
+            framesSinceLastExport = 0;
+        }
+    }
+
     return STATE_OK;
 }
 
@@ -241,4 +256,80 @@ void RenderClient::updateFrameCount() {
         frameCount = 0;
         startTime = currentTime;
     }
+}
+
+bool RenderClient::exportRenderResult(const std::string& outputPath) {
+    LOGI("开始导出渲染结果到: %s", outputPath.c_str());
+    
+    // 参数验证
+    if (outputPath.empty()) {
+        LOGI("导出失败: 输出路径为空");
+        return false;
+    }
+    
+    if (width <= 0 || height <= 0) {
+        LOGI("导出失败: 无效的分辨率 (%dx%d)", width, height);
+        return false;
+    }
+    
+    try {
+        // 分配内存存储像素数据
+        std::vector<unsigned char> pixels(width * height * 4); // RGBA格式
+        
+        if (pixels.empty()) {
+            LOGI("导出失败: 无法分配内存");
+            return false;
+        }
+        
+        // 从当前帧缓冲区读取像素数据
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        
+        // 检查OpenGL错误
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            LOGI("glReadPixels错误: 0x%x", err);
+            return false;
+        }
+        
+        // 创建OpenCV Mat对象（注意OpenGL的原点在左下角，需要翻转）
+        cv::Mat image(height, width, CV_8UC4, pixels.data());
+        
+        if (image.empty()) {
+            LOGI("导出失败: 无法创建图像Mat");
+            return false;
+        }
+        
+        // 翻转图像（OpenGL坐标系和图像坐标系Y轴相反）
+        cv::Mat flippedImage;
+        cv::flip(image, flippedImage, 0);
+        
+        // 转换RGBA到BGR（OpenCV默认使用BGR格式）
+        cv::Mat bgrImage;
+        cv::cvtColor(flippedImage, bgrImage, cv::COLOR_RGBA2BGR);
+        
+        // 保存图像
+        bool success = cv::imwrite(outputPath, bgrImage);
+        
+        if (success) {
+            LOGI("渲染结果导出成功: %s (分辨率: %dx%d)", outputPath.c_str(), width, height);
+        } else {
+            LOGI("保存图像失败: %s (可能是权限或路径问题)", outputPath.c_str());
+        }
+        
+        return success;
+        
+    } catch (const std::exception& e) {
+        LOGI("导出渲染结果时发生异常: %s", e.what());
+        return false;
+    } catch (...) {
+        LOGI("导出渲染结果时发生未知异常");
+        return false;
+    }
+}
+
+void RenderClient::enableAutoExport(bool enable, int intervalFrames) {
+    autoExportEnabled = enable;
+    exportInterval = intervalFrames;
+    framesSinceLastExport = 0;
+    LOGI("自动导出%s，间隔帧数: %d", enable ? "已启用" : "已禁用", intervalFrames);
 }
