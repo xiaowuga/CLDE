@@ -93,11 +93,27 @@ public:
     
     // 设置是否启用自动导出（每N帧导出一次）
     void enableAutoExport(bool enable, int intervalFrames = 30);
+    
+    // 离屏渲染并导出（不影响当前渲染，支持自定义分辨率）
+    bool exportOffscreenRender(const std::string& outputPath, 
+                               int targetWidth, 
+                               int targetHeight,
+                               const glm::mat4& project,
+                               const glm::mat4& view);
 
 private:
     bool autoExportEnabled = false;
     int exportInterval = 30;
     int framesSinceLastExport = 0;
+    
+    // 离屏渲染相关
+    bool createOffscreenFBO(int width, int height);
+    void destroyOffscreenFBO();
+    GLuint offscreenFBO = 0;
+    GLuint offscreenColorTexture = 0;
+    GLuint offscreenDepthRBO = 0;
+    int offscreenWidth = 0;
+    int offscreenHeight = 0;
 
 };
 

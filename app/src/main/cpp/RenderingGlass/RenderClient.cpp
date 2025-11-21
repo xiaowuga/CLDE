@@ -16,7 +16,10 @@
 
 RenderClient::RenderClient() = default;
 
-RenderClient::~RenderClient() = default;
+RenderClient::~RenderClient() {
+    // 清理离屏渲染资源
+    destroyOffscreenFBO();
+}
 
 //TODO：现在没有传进来的关节位姿，后续需要添加
 
@@ -332,4 +335,214 @@ void RenderClient::enableAutoExport(bool enable, int intervalFrames) {
     exportInterval = intervalFrames;
     framesSinceLastExport = 0;
     LOGI("自动导出%s，间隔帧数: %d", enable ? "已启用" : "已禁用", intervalFrames);
+}
+
+bool RenderClient::createOffscreenFBO(int width, int height) {
+    LOGI("创建离屏FBO: %dx%d", width, height);
+    
+    // 如果已存在FBO且尺寸相同，直接返回
+    if (offscreenFBO != 0 && offscreenWidth == width && offscreenHeight == height) {
+        LOGI("FBO已存在且尺寸匹配，复用现有FBO");
+        return true;
+    }
+    
+    // 如果尺寸不同，先销毁旧的FBO
+    if (offscreenFBO != 0) {
+        destroyOffscreenFBO();
+    }
+    
+    // 生成FBO
+    glGenFramebuffers(1, &offscreenFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, offscreenFBO);
+    
+    // 创建颜色纹理
+    glGenTextures(1, &offscreenColorTexture);
+    glBindTexture(GL_TEXTURE_2D, offscreenColorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, offscreenColorTexture, 0);
+    
+    // 创建深度渲染缓冲
+    glGenRenderbuffers(1, &offscreenDepthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, offscreenDepthRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, offscreenDepthRBO);
+    
+    // 检查FBO完整性
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        LOGI("FBO创建失败，状态: 0x%x", status);
+        destroyOffscreenFBO();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return false;
+    }
+    
+    // 解绑FBO，恢复默认帧缓冲
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    offscreenWidth = width;
+    offscreenHeight = height;
+    
+    LOGI("离屏FBO创建成功");
+    return true;
+}
+
+void RenderClient::destroyOffscreenFBO() {
+    if (offscreenFBO != 0) {
+        glDeleteFramebuffers(1, &offscreenFBO);
+        offscreenFBO = 0;
+    }
+    if (offscreenColorTexture != 0) {
+        glDeleteTextures(1, &offscreenColorTexture);
+        offscreenColorTexture = 0;
+    }
+    if (offscreenDepthRBO != 0) {
+        glDeleteRenderbuffers(1, &offscreenDepthRBO);
+        offscreenDepthRBO = 0;
+    }
+    offscreenWidth = 0;
+    offscreenHeight = 0;
+    LOGI("离屏FBO已销毁");
+}
+
+bool RenderClient::exportOffscreenRender(const std::string& outputPath, 
+                                         int targetWidth, 
+                                         int targetHeight,
+                                         const glm::mat4& customProject,
+                                         const glm::mat4& customView) {
+    LOGI("开始离屏渲染导出: %s, 分辨率: %dx%d", outputPath.c_str(), targetWidth, targetHeight);
+    
+    // 参数验证
+    if (outputPath.empty()) {
+        LOGI("导出失败: 输出路径为空");
+        return false;
+    }
+    
+    if (targetWidth <= 0 || targetHeight <= 0) {
+        LOGI("导出失败: 无效的目标分辨率 (%dx%d)", targetWidth, targetHeight);
+        return false;
+    }
+    
+    try {
+        // 保存当前OpenGL状态
+        GLint prevFBO = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
+        
+        GLint prevViewport[4];
+        glGetIntegerv(GL_VIEWPORT, prevViewport);
+        
+        // 创建或复用FBO
+        if (!createOffscreenFBO(targetWidth, targetHeight)) {
+            LOGI("创建FBO失败");
+            return false;
+        }
+        
+        // 绑定离屏FBO
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFBO);
+        
+        // 设置视口为目标分辨率
+        glViewport(0, 0, targetWidth, targetHeight);
+        
+        // 清除缓冲区
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // 执行渲染
+        glm::mat4 model_trans_mat = glm::mat4(1.0);
+        
+        // 根据新的分辨率调整投影矩阵（保持宽高比）
+        glm::mat4 adjustedProject = customProject;
+        float aspectRatio = (float)targetWidth / (float)targetHeight;
+        float originalAspectRatio = (float)width / (float)height;
+        
+        // 如果宽高比不同，需要调整投影矩阵
+        if (std::abs(aspectRatio - originalAspectRatio) > 0.01f) {
+            // 这里可以根据需要调整投影矩阵
+            // 简单起见，我们保持原投影矩阵，但用户可以传入自定义的
+            LOGI("目标宽高比 %.2f 与原始宽高比 %.2f 不同", aspectRatio, originalAspectRatio);
+        }
+        
+        // 渲染场景
+        if (mModel) {
+            mModel->render(adjustedProject, customView, model_trans_mat);
+        }
+        
+        if (mGizmoPass) {
+            mGizmoPass->updateBoundingBOX(boundingBoxArray);
+            mGizmoPass->render(adjustedProject, customView);
+        }
+        
+        if (mPbrPass) {
+            mPbrPass->render(adjustedProject, customView, joc);
+        }
+        
+        // 确保渲染完成
+        glFinish();
+        
+        // 检查OpenGL错误
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            LOGI("渲染过程中出现OpenGL错误: 0x%x", err);
+        }
+        
+        // 读取像素数据
+        std::vector<unsigned char> pixels(targetWidth * targetHeight * 4); // RGBA格式
+        glReadPixels(0, 0, targetWidth, targetHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        
+        // 检查读取错误
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            LOGI("glReadPixels错误: 0x%x", err);
+            glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
+            glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+            return false;
+        }
+        
+        // 恢复原始OpenGL状态
+        glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
+        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        
+        // 图像处理和保存
+        cv::Mat image(targetHeight, targetWidth, CV_8UC4, pixels.data());
+        
+        if (image.empty()) {
+            LOGI("导出失败: 无法创建图像Mat");
+            return false;
+        }
+        
+        // 翻转图像（OpenGL坐标系和图像坐标系Y轴相反）
+        cv::Mat flippedImage;
+        cv::flip(image, flippedImage, 0);
+        
+        // 转换RGBA到BGR
+        cv::Mat bgrImage;
+        cv::cvtColor(flippedImage, bgrImage, cv::COLOR_RGBA2BGR);
+        
+        // 保存图像
+        bool success = cv::imwrite(outputPath, bgrImage);
+        
+        if (success) {
+            LOGI("离屏渲染导出成功: %s (分辨率: %dx%d)", outputPath.c_str(), targetWidth, targetHeight);
+        } else {
+            LOGI("保存图像失败: %s", outputPath.c_str());
+        }
+        
+        return success;
+        
+    } catch (const std::exception& e) {
+        LOGI("离屏渲染导出时发生异常: %s", e.what());
+        // 确保恢复OpenGL状态
+        GLint prevFBO = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
+        if (prevFBO == (GLint)offscreenFBO) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        return false;
+    } catch (...) {
+        LOGI("离屏渲染导出时发生未知异常");
+        return false;
+    }
 }
