@@ -20,7 +20,7 @@ public:
     ~renderModel();
 
     std::vector<cadDataManager::pmiInfo> pmi;
-    std::map<std::string, std::vector<int>> protoId;
+    std::map<std::string, int> protoId;
     std::vector<std::string> nameVector;
     std::vector<std::vector<glm::vec3>> verticesVector;
     std::vector<std::vector<glm::vec3>> normalsVector;
@@ -41,6 +41,8 @@ public:
 
     bool loadFbModel(const std::string& file_name, const std::string& file_path);
 
+    void processMeshData(std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> MapInfo);
+
     bool initialize() { return false; };
 
     bool bindMeshTexture(const std::string& meshName, const std::string& textureName);
@@ -60,15 +62,15 @@ public:
         try {
             auto meshID = protoId.at(name);  // 如果 key 不存在，抛出 std::out_of_range
             int k = 0;
-            for( int i : meshID ){
-                auto mesh = mMeshes->at(std::to_string(i));
+            for( int i = 0; i < meshID; i++ ){
+                auto mesh = mMeshes->at(name+std::to_string(i));
 //                mMeshes->at(std::to_string(i)).mTransformVector = std::move(transform[k]);
                 LOGI("%i",mesh.mVertices.size());
                 mesh.mTransformVector = std::move(transform[k]);
                 mesh.setupMesh();
-                mMeshes->erase(std::to_string(i));
+                mMeshes->erase(name+std::to_string(i));
                 mMeshes->insert(std::pair<std::string, renderMesh>(
-                        std::to_string(i),
+                        name+std::to_string(i),
                         mesh));
                 k++;
             }

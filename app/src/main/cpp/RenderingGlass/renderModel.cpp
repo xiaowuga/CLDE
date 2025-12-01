@@ -369,49 +369,29 @@ glm::vec2 renderModel::toNewVec2(std::vector<T>* flat_vector, int begin)
 
 bool renderModel::loadFbModel(const std::string& file_name, const std::string& file_path) {
 
-//std::string fliepath = MakeSdcardPath("/Download/sphere.fb");
-//    std::string  filePath = modelFileName;
-//    cadDataManager::DataInterface::parseLocalModel(file_name, file_path);
     cadDataManager::DataInterface::setActiveDocumentData(file_name);
-//    std::vector<cadDataManager::RenderInfo> renderInfoArray = cadDataManager::DataInterface::getRenderInfo();
-//    cadDataManager::RenderInfo renderInfo = renderInfoArray[0];
 
-//    std::string hello = renderInfo.protoId;
-//    const char* protoHello = hello.c_str();
-//    infof(protoHello);
     auto MapInfo = cadDataManager::DataInterface::getRenderInfoMap();
     pmi = cadDataManager::DataInterface::getPmiInfos();
-//    auto instances = cadDataManager::DataInterface::getInstances();
-//    auto instanceInfos = cadDataManager::DataInterface::getInstanceInfos();
-//    std::string fbModelData = cadDataManager::DataInterface::getModelFlatbuffersData();
 
-    uint8_t* buffer_data;
-    int buffer_size;
-    int lastProtoSize = verticesVector.size();
-    std::string name = "";
+    processMeshData(MapInfo);
+    return true;
+}
+
+void renderModel::processMeshData(std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> MapInfo){
+
+//    auto startTime = std::chrono::high_resolution_clock::now();
     for (auto it = MapInfo.begin(); it != MapInfo.end(); ++it){
-        if(verticesVector.size() > lastProtoSize)
-        {
-            std::vector<int> tempInt;
-            for(int k = lastProtoSize; k < verticesVector.size(); k++)
-            {
-                tempInt.push_back(k);
-            }
-            protoId.insert(std::pair<std::string, std::vector<int>>(
-                    name,
-                    tempInt
-            ));
-            lastProtoSize = verticesVector.size();
-        }
-        name = it->first;
+        auto name = it->first;
         auto info = it->second;
+        int temp = 0;
         for (int o = 0; o < info.size(); o++) {
             std::unordered_map<TinyModelVertex, uint32_t> uniqueVertices; //存储点信息，相同点只存一份
             std::vector<TinyModelVertex> mVertices{};                     //保存点在数组中位置信息
             std::vector<uint32_t> mIndices{};                             //索引，找点
 
             cadDataManager::RenderInfo &modelfbs = info[o];
-            auto protoId = modelfbs.protoId;
+//            auto protoId = modelfbs.protoId;
             int num = modelfbs.matrixNum;
             auto matrix = modelfbs.matrix;
             auto type = modelfbs.type;
@@ -421,15 +401,9 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
             auto normal = modelGeo->getNormal();
             auto uv = modelGeo->getUV();
             auto modelPar = modelfbs.params;
-            auto metalness = modelPar->mMetalness;
             auto specular = modelPar->mSpecular;
-            auto opacity = modelPar->mOpacity;
             auto color = modelPar->mColor;//后续会改成三维rgb
             auto emissive = modelPar->mEmissive;
-            auto emissiveIntensity = modelPar->mEmissiveIntensity;
-            auto shininess = modelPar->mShininess;
-            auto roughness = modelPar->mRoughness;
-            auto transmission = modelPar->mTransmission;
             auto material = modelPar->getMaterialName();//这里得到材质的名称(未生效)
             bool mIsTexture = false;
 
@@ -571,23 +545,29 @@ bool renderModel::loadFbModel(const std::string& file_name, const std::string& f
                     mVerticesUV.push_back(mVertices[i].uv);
                 }
 
-                nameVector.push_back(protoId);
-                verticesVector.push_back(mVerticesPos);
-                normalsVector.push_back(mVerticesNor);
-                UVVector.push_back(mVerticesUV);
-                indicesVector.push_back(mIndices);
-                materialVector.push_back(pbrMaterial);
-                materialNameVector.push_back(material);//未生效
-                transformVector.push_back(matrix);
-                transformNumVector.push_back(num);
-                isTextureVector.push_back(mIsTexture);
-
-//                infof("verticesVector size : %i", verticesVector.size());
+                std::string tempName = name+std::to_string(temp);
+                auto& meshMap = *mMeshes;  // 获取底层map的引用
+                meshMap[tempName] = createMeshFromCustomData(mVerticesPos, mVerticesNor,
+                                                                              mVerticesUV, mIndices, pbrMaterial,
+                                                                              material, mIsTexture,
+                                                                              num, matrix);
+                temp++;
             }
         }
-    }
+        mMeshes->erase(name+std::to_string(temp));//高亮时可能会多一个mesh，删去
 
-    return true;
+        if(temp != 0)
+        {
+            protoId.insert(std::pair<std::string, int>(
+                    name,
+                    temp
+            ));
+        }
+
+//        auto currentTime = std::chrono::high_resolution_clock::now();
+//        std::chrono::duration<float> elapsedTime = currentTime - startTime;
+//        LOGI("protoID : %s, time : %f", it->first.c_str(), elapsedTime.count());
+    }
 }
 
 void renderModel::draw() {

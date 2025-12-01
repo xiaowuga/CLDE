@@ -2,6 +2,9 @@
 #include <stddef.h>
 #include "common/gfxwrapper_opengl.h"
 
+renderMesh::renderMesh(){
+
+}
 
 renderMesh::renderMesh(std::vector<renderVertex> vertices, std::vector<unsigned int> indices, std::vector<renderTexture> textures)
     : mVertices(vertices), mIndices(indices), mTextures(textures) {

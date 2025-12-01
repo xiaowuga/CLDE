@@ -9,6 +9,7 @@
 #include"opencv2/core.hpp"
 #include "app/utilsmym.hpp"
 #include <opencv2/opencv.hpp>
+#include <utility>
 
 #define LOG_TAG "RenderClient.cpp"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -39,8 +40,8 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
         mModel->loadFbModel(scene_virtualObjects[i]->name, scene_virtualObjects[i]->filePath);
     }
 
-    mModel->pushMeshFromCustomData();
-    mModel->countIndiceSum();
+//    mModel->pushMeshFromCustomData();
+//    mModel->countIndiceSum();
 
     //加载模型的动画数据：Action + State
     cadDataManager::DataInterface::loadAnimationActionData(appData.animationActionConfigFile);
@@ -106,12 +107,6 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 
     glm::mat4 model_trans_mat = glm::mat4(1.0);
 
-    std::string modelName    = "";
-    std::string instanceName = "";
-    std::string instanceId   = "";
-    std::string originState  = "";
-    std::string targetState  = "";
-
     //交互需要的接口
     if(!sceneData.actionPassage.isEmpty()){
         modelName    = sceneData.actionPassage.modelName;
@@ -125,7 +120,6 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
         std::vector<cadDataManager::AnKeyframe> &anKeyframes = animationState->keyframes;
         for (auto& anKeyframe : anKeyframes) {
             if (anKeyframe.originState == originState && anKeyframe.targetState == targetState) {
-                //TODO 找不到position因为动画Json数据对应关系没做好
                 positionArray   = anKeyframe.positionArray;
                 quaternionArray = anKeyframe.quaternionArray;
             }
@@ -146,11 +140,9 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 //        instanceId = instance->getId();
 //
 //        cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationStateByName(modelName, instanceName);
-////    cadDataManager::AnimationStateUnit::Ptr animationState = cadDataManager::DataInterface::getAnimationState(modelName, instanceId);
 //        std::vector<cadDataManager::AnKeyframe> anKeyframes = animationState->keyframes;
 //        for (auto& anKeyframe : anKeyframes) {
 //            if (anKeyframe.originState == originState && anKeyframe.targetState == targetState) {
-//                //TODO 找不到position因为动画Json数据对应关系没做好
 //                positionArray = anKeyframe.positionArray;
 //                quaternionArray = anKeyframe.quaternionArray;
 //            }
@@ -165,59 +157,16 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
         std::vector<float> position   = { positionArray[actionFrame * 3], positionArray[actionFrame * 3 + 1], positionArray[actionFrame * 3 + 2] };
         std::vector<float> quaternion = { quaternionArray[actionFrame * 4] , quaternionArray[actionFrame * 4 + 1], quaternionArray[actionFrame * 4 + 2],quaternionArray[actionFrame * 4 + 3] };
         std::vector<float> matrix     = cadDataManager::DataInterface::composeMatrix(position, quaternion);
-        std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel = cadDataManager::DataInterface::modifyInstanceMatrix(instanceId, matrix);//零件实例位置的修改
 
-//        std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel = cadDataManager::DataInterface::modifyInstanceColor(instanceId, "#FF0000");//零件实例位置的修改
+        std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel;
 
-//        mModel->getMMeshes().at(modifyModel.begin()->first).mTransformVector = modifyModel.begin()->second.begin()->matrix;
+//        //测试高亮的接口，需要把restoreInstanceColor给注释掉
+//        highlightInstance(modelName, instanceId);
+        cadDataManager::DataInterface::restoreInstanceColor(instanceId);//零件实例高亮的恢复
+//        cadDataManager::DataInterface::modifyInstanceColor(instanceId, "#FF0000");//零件实例高亮的修改
+        modifyModel = cadDataManager::DataInterface::modifyInstanceMatrix(instanceId, matrix);//零件实例位置的修改
 
-        std::string meshName = modifyModel.begin()->first;
-        std::vector<std::vector<float>> meshTransform;
-        for(auto& mModify : modifyModel){
-            for(auto& mModifyInstance : mModify.second){
-                if(mModifyInstance.type == "mesh"){
-                    meshTransform.push_back(mModifyInstance.matrix);
-                }
-            }
-        }
-//        auto &meshTransform = modifyModel.begin()->second.begin()->matrix;
-        mModel->updateMMesh(meshName, meshTransform);
-
-//        auto originArray = mGizmoPass->getBoxArray(meshName);
-//        glm::vec3 center = {
-//                (originArray[0] + originArray[3]) / 2,
-//                (originArray[1] + originArray[4]) / 2,
-//                (originArray[2] + originArray[5]) / 2
-//        };
-//
-//        glm::vec3 translation = {
-//
-//        };
-//
-//
-//        // 伪代码
-//        // 计算当前中心点
-//        Point3D currentCenter = {
-//                (min.x + max.x) * 0.5f,
-//                (min.y + max.y) * 0.5f,
-//                (min.z + max.z) * 0.5f
-//        };
-//
-//        // 计算平移向量
-//        Point3D translation = {
-//                center.x - currentCenter.x,
-//                center.y - currentCenter.y,
-//                center.z - currentCenter.z
-//        };
-//
-//        // 应用平移
-//        min.x += translation.x;
-//        min.y += translation.y;
-//        min.z += translation.z;
-//
-//        max.x += translation.x;
-//        max.y += translation.y;
-//        max.z += translation.z;
+        mModel->processMeshData(modifyModel);
 
         if((actionFrame * 3 + 3) == positionArray.size()){
             actionFrame = -1;
@@ -236,7 +185,7 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 
     updateFrameCount();
     auto testNum = getFps();
-    testNum = getIndiceSum();
+//    testNum = getIndiceSum();
     testNum = getFps();
 
     return STATE_OK;
@@ -280,6 +229,13 @@ void RenderClient::updateFrameCount() {
         frameCount = 0;
         startTime = currentTime;
     }
+}
+
+void RenderClient::highlightInstance(std::string modelName, std::string instanceId){
+    std::unordered_map<std::string, std::vector<cadDataManager::RenderInfo>> modifyModel;
+    cadDataManager::DataInterface::setActiveDocumentData(modelName);
+    modifyModel = cadDataManager::DataInterface::modifyInstanceColor(instanceId, "#FF0000");//零件实例高亮的修改
+    mModel->processMeshData(modifyModel);
 }
 
 std::vector<float> countCenter(){

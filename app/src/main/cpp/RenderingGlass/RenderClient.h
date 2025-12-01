@@ -46,7 +46,13 @@ private:
     std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<float>> startTime;
     float fps;
     int width = 1920;
-    int height = 1080;
+    int height = 1200;
+
+    std::string modelName    = "";
+    std::string instanceName = "";
+    std::string instanceId   = "";
+    std::string originState  = "";
+    std::string targetState  = "";
 
 public:
     std::vector<float> boundingBoxArray;
@@ -89,6 +95,7 @@ public:
         return mModel->getIndiceSum();
     }
 
+    void highlightInstance(std::string modelName, std::string instanceId);
 };
 
 
