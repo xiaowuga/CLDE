@@ -74,24 +74,47 @@ void SSAOGeometryPass::initShader() {
 
     glGenTextures(1, &gNormal);
     glBindTexture(GL_TEXTURE_2D, gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gNormal, 0);
+
+// 创建深度附件
+    glGenTextures(1, &depthTextureNormal);
+    glBindTexture(GL_TEXTURE_2D, depthTextureNormal);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureNormal, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glGenFramebuffers(1, &gBufferPosition);
     glBindFramebuffer(GL_FRAMEBUFFER, gBufferPosition);
     glGenTextures(1, &gPosition);
     glBindTexture(GL_TEXTURE_2D, gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+    // 创建深度附件
+    glGenTextures(1, &depthTexturePosition);
+    glBindTexture(GL_TEXTURE_2D, depthTexturePosition);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureNormal, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 //    unsigned int att0 = GL_COLOR_ATTACHMENT0;
@@ -111,7 +134,11 @@ bool SSAOGeometryPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm:
     // -----------------------------------------------------------------
 
     glBindFramebuffer(GL_FRAMEBUFFER, gBufferNormal);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
     mShader.use();
     glm::mat4 model = glm::scale(m,glm::vec3 (0.001f));
     mShader.setUniformMat4("model", model);
@@ -119,19 +146,22 @@ bool SSAOGeometryPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm:
     mShader.setUniformMat4("projection", p);
     mShader.setUniformBool("invertedNormals", false);
     mShader.setUniformBool("isNotInstanced", false);
-    draw();
+    drawNormal();
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
 
     glBindFramebuffer(GL_FRAMEBUFFER, gBufferPosition);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
     mPositionShader.use();
     mPositionShader.setUniformMat4("model", model);
     mPositionShader.setUniformMat4("view", v);
     mPositionShader.setUniformMat4("projection", p);
     mPositionShader.setUniformBool("invertedNormals", false);
     mPositionShader.setUniformBool("isNotInstanced", false);
-    draw();
+    drawPosition();
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
 
@@ -139,14 +169,39 @@ bool SSAOGeometryPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm:
 }
 
 void SSAOGeometryPass::draw() {
+
     GL_CALL(glFrontFace(GL_CCW));
     GL_CALL(glCullFace(GL_BACK));
     GL_CALL(glEnable(GL_CULL_FACE));
-//    GL_CALL(glEnable(GL_DEPTH_TEST));
+
 //    GL_CALL(glEnable(GL_BLEND));
 //    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     for (auto &it : *mMeshes) {
         it.second.drawShadowMap(mShader);
+    }
+}
+void SSAOGeometryPass::drawNormal() {
+
+    GL_CALL(glFrontFace(GL_CCW));
+    GL_CALL(glCullFace(GL_BACK));
+    GL_CALL(glEnable(GL_CULL_FACE));
+
+//    GL_CALL(glEnable(GL_BLEND));
+//    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    for (auto &it : *mMeshes) {
+        it.second.drawShadowMap(mShader);
+    }
+}
+void SSAOGeometryPass::drawPosition() {
+
+    GL_CALL(glFrontFace(GL_CCW));
+    GL_CALL(glCullFace(GL_BACK));
+    GL_CALL(glEnable(GL_CULL_FACE));
+
+//    GL_CALL(glEnable(GL_BLEND));
+//    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    for (auto &it : *mMeshes) {
+        it.second.drawShadowMap(mPositionShader);
     }
 }
 void SSAOGeometryPass::renderSphere()

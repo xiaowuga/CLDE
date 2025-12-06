@@ -8,7 +8,7 @@ layout(location = 8) in vec4 instanceMatrix1; // 第二列
 layout(location = 9) in vec4 instanceMatrix2; // 第三列
 layout(location = 10) in vec4 instanceMatrix3; // 第四列
 
-/*
+
 out vec2 TexCoords;
 out vec3 FragPos;
 out vec3 Normal;
@@ -33,12 +33,18 @@ void main()
     mat3 normalMatrix = transpose(inverse(mat3(viewMatrix)));
     Normal = normalMatrix * (invertedNormals ? -aNormal : aNormal);
 
+    //这个是对的法线，需要所有单个小模型一起做个变换
+    //mat3 normalMatrix1 = transpose(inverse(mat3(finalModel)));
+    //Normal = normalMatrix1 * (invertedNormals ? -aNormal : aNormal);
+//vec3 WorldPos = vec3(finalModel * vec4(aPos , 1.0));
+//gl_Position =  projection * view * vec4(WorldPos, 1.0);
+
     gl_Position = projection * viewPos;
 
 }
-*/
 
 
+/*
 out vec2 TexCoords;
 out vec3 FragPos;
 out vec3 Normal;
@@ -68,3 +74,4 @@ void main()
 
     gl_Position =  projection * view * vec4(WorldPos, 1.0);
 }
+*/

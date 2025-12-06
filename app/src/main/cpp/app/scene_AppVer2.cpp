@@ -89,12 +89,14 @@ namespace {
 //            sceneData->setObject(object_name, ptr);
 //        }
 
-        std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
+        std::vector<std::string> model_list = {
+                                                "di0", "di1", "di2", "di3", "di5",
                                                 "di7", "di8", "Marker",
 //                                                "monitaijia",
                                                 "ranyoukongzhi", "shang1(you)", "shang1",
                                                 "TUILIGAN", "YIBIAOPAN", "zhong1", "zhong2",
-                                                "zhongyou", "zhongzuo", "zhongzuo1"};
+                                                "zhongyou", "zhongzuo", "zhongzuo1"
+        };
 
         for(int i = 0; i < model_list.size(); i++) {
             std::string model_name = model_list[i];

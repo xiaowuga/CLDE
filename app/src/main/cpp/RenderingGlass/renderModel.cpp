@@ -434,10 +434,34 @@ void renderModel::processMeshData(std::unordered_map<std::string, std::vector<ca
 
 
             }
-            else if(testcolor == "BBBBBB" || testcolor == "333333")
+            else if(testcolor == "333333")
             {
                 // diffuse gray board
                 pbrMaterial.albedoValue = {0.2f, 0.2f, 0.2f};
+                pbrMaterial.useAlbedoMap = false;
+                pbrMaterial.albedoMapId = 0;
+
+                pbrMaterial.normalValue = {0.0f, 0.0f, 1.0f};
+                pbrMaterial.useNormalMap = false;
+                pbrMaterial.normalMapId = 0;
+
+                pbrMaterial.metallicValue = 0.3f;
+                pbrMaterial.useMetallicMap = false;
+                pbrMaterial.metallicMapId = 0;
+
+                pbrMaterial.roughnessValue = 0.8f;
+                pbrMaterial.useRoughnessMap = false;
+                pbrMaterial.roughnessMapId = 0;
+
+                pbrMaterial.aoValue = 1.0f;
+                pbrMaterial.useAoMap = false;
+                pbrMaterial.aoMapId = 0;
+
+            }
+            else if(testcolor == "BBBBBB")
+            {
+                // diffuse gray board
+                pbrMaterial.albedoValue = {0.8f, 0.8f, 0.8f};
                 pbrMaterial.useAlbedoMap = false;
                 pbrMaterial.albedoMapId = 0;
 
@@ -456,7 +480,6 @@ void renderModel::processMeshData(std::unordered_map<std::string, std::vector<ca
                 pbrMaterial.aoValue = 1.0f;
                 pbrMaterial.useAoMap = false;
                 pbrMaterial.aoMapId = 0;
-
 
             }
             else if(testcolor == "FF0000")
@@ -495,7 +518,7 @@ void renderModel::processMeshData(std::unordered_map<std::string, std::vector<ca
                 pbrMaterial.useNormalMap = false;
                 pbrMaterial.normalMapId = 0;
 
-                pbrMaterial.metallicValue = 0.8f;
+                pbrMaterial.metallicValue = 0.6f;
                 pbrMaterial.useMetallicMap = false;
                 pbrMaterial.metallicMapId = 0;
 

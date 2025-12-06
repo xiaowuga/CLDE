@@ -131,6 +131,7 @@ void SSAOPass::initShader() {
 
 bool SSAOPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm::mat4 &m) {
 #if 0
+    GL_CALL(glDisable(GL_DEPTH_TEST));
     debugRender();
 #endif
     // 2. generate SSAO texture
@@ -144,6 +145,7 @@ bool SSAOPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm::mat4 &m
         infof("Framebuffer not complete! status: %x", status);
     }
 //    glClear(GL_COLOR_BUFFER_BIT);
+    GL_CALL(glDisable(GL_DEPTH_TEST));
     mSSAOShader.use();
     // Send kernel + rotation
     for (unsigned int i = 0; i < 8; ++i)

@@ -15,6 +15,9 @@ const int kernelSize = 8;
 const float radius = 0.5;
 const float bias = 0.025;
 
+//const float radius = 0.1;
+//const float bias = 0.025;
+
 // tile noise texture over screen based on screen dimensions divided by noise size
 const vec2 noiseScale = vec2(1920.0/4.0, 1200.0/4.0);
 
