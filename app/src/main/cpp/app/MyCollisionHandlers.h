@@ -11,6 +11,21 @@
 #include "InteractionConfigLoader.h"
 #include "Animator.h"
 #include "AnimationPlayer.h"
+
+std::string getCurrentTimestamp() {
+    // 获取当前时间点
+    auto now = std::chrono::system_clock::now();
+    // 转换为time_t
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    // 转换为本地时间
+    std::tm local_tm;
+    local_tm = *std::localtime(&now_time);
+    // 格式化
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", &local_tm);
+    return std::string(buffer);
+}
+
 #define LOG_TAG "MyCollisionHandlers.h"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 namespace MyCollisionHandlers {
@@ -42,6 +57,7 @@ namespace MyCollisionHandlers {
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
+
             //TODO:让渲染模块控制动画播放速度
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
@@ -69,6 +85,19 @@ namespace MyCollisionHandlers {
                 sceneData.actionPassage.instanceId = obj2->instanceId;
                 currentStateIndex = targetStateIndex;
             }
+            // Log interaction
+            _frameDataPtr->interactionLog.curLGesture = _frameDataPtr->gestureDataPtr->curLGesture;
+            _frameDataPtr->interactionLog.curRGesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            _frameDataPtr->interactionLog.interactionType = "Stick";
+            _frameDataPtr->interactionLog.targetModelName = obj2->modelName;
+            _frameDataPtr->interactionLog.targetInstanceName = obj2->instanceName;
+            _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
+            _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
+            _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
+            _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
+
+            //LOGI("InteractionLog %s", _frameDataPtr->interactionLog.toString().c_str());
         }
     private:
         bool animationPlaying = false;
@@ -125,6 +154,18 @@ namespace MyCollisionHandlers {
                 sceneData.actionPassage.instanceId = obj2->instanceId;
                 currentStateIndex = targetStateIndex;
             }
+
+            // Log interaction
+            _frameDataPtr->interactionLog.curLGesture = _frameDataPtr->gestureDataPtr->curLGesture;
+            _frameDataPtr->interactionLog.curRGesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            _frameDataPtr->interactionLog.interactionType = "Button";
+            _frameDataPtr->interactionLog.targetModelName = obj2->modelName;
+            _frameDataPtr->interactionLog.targetInstanceName = obj2->instanceName;
+            _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
+            _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
+            _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
+            _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
         bool animationPlaying = false;
@@ -206,6 +247,18 @@ namespace MyCollisionHandlers {
                 sceneData.actionPassage.instanceId = obj2->instanceId;
                 currentStateIndex = targetStateIndex;
             }
+
+            // Log interaction
+            _frameDataPtr->interactionLog.curLGesture = _frameDataPtr->gestureDataPtr->curLGesture;
+            _frameDataPtr->interactionLog.curRGesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            _frameDataPtr->interactionLog.interactionType = "ProtectiveCover";
+            _frameDataPtr->interactionLog.targetModelName = obj2->modelName;
+            _frameDataPtr->interactionLog.targetInstanceName = obj2->instanceName;
+            _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
+            _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
+            _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
+            _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
         cadDataManager::AnimationStateUnit::Ptr animationState = nullptr;
@@ -314,6 +367,18 @@ namespace MyCollisionHandlers {
                 sceneData.actionPassage.instanceId = obj2->instanceId;
                 currentStateIndex = targetStateIndex;
             }
+
+            // Log interaction
+            _frameDataPtr->interactionLog.curLGesture = _frameDataPtr->gestureDataPtr->curLGesture;
+            _frameDataPtr->interactionLog.curRGesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            _frameDataPtr->interactionLog.interactionType = "ButtonUnderCover";
+            _frameDataPtr->interactionLog.targetModelName = obj2->modelName;
+            _frameDataPtr->interactionLog.targetInstanceName = obj2->instanceName;
+            _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
+            _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
+            _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
+            _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
         bool animationPlaying = false;
@@ -389,6 +454,18 @@ namespace MyCollisionHandlers {
                 sceneData.actionPassage.instanceId = obj2->instanceId;
                 currentStateIndex = targetStateIndex;
             }
+
+            // Log interaction
+            _frameDataPtr->interactionLog.curLGesture = _frameDataPtr->gestureDataPtr->curLGesture;
+            _frameDataPtr->interactionLog.curRGesture = _frameDataPtr->gestureDataPtr->curRGesture;
+            _frameDataPtr->interactionLog.interactionType = "Dial";
+            _frameDataPtr->interactionLog.targetModelName = obj2->modelName;
+            _frameDataPtr->interactionLog.targetInstanceName = obj2->instanceName;
+            _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
+            _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
+            _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
+            _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
         bool animationPlaying = false;
