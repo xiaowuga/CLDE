@@ -13,6 +13,7 @@
 #include "glm/detail/type_mat.hpp"
 #include "glm/glm.hpp"
 #include "log.h"
+#include "json.hpp"
 
 
 /**
@@ -300,7 +301,110 @@ private:
     std::unordered_map<std::string, CreateFunc> registry_;
     // 注册所有 SceneObject 类
 };
+/**
+ * 单手原子手势类别
+*/
+enum Gesture{
+    ZOOM,GRASP,CURSOR,UNDEFINED
+};
+const std::string GestureNames[] = {"ZOOM", "GRASP", "CURSOR", "UNDEFINED"};
 
+enum Hands{
+    LEFT,RIGHT
+};
+
+class GestureUnderstandingData{
+public:
+    /**
+     * 当前左手手势
+    */
+    Gesture curLGesture=Gesture::UNDEFINED;
+    /**
+     * 当前右手手势
+    */
+    Gesture curRGesture=Gesture::UNDEFINED;
+    /**
+     * 最大缩放距离
+     */
+    float MAX_ZOOM_DISTANCE=0.15;
+    /**
+     * 最小缩放距离
+     */
+    float MIN_ZOOM_DISTANCE=0.05;
+    /**
+     * 缩放速度
+     */
+    float ZOOM_SPEED=0.01;
+    /**
+     * 最小缩放尺度
+     */
+    float MIN_ZOOM_SCALE=0.5;
+};
+
+/**
+ * InteractionLog
+ * 存放每一帧交互日志的数据
+ */
+class InteractionLog
+{
+public:
+    /**
+     * 当前左手手势
+    */
+    Gesture curLGesture=Gesture::UNDEFINED;
+    /**
+     * 当前右手手势
+    */
+    Gesture curRGesture=Gesture::UNDEFINED;
+    /**
+     * 交互类型
+    */
+    std::string interactionType = "";
+    /**
+     * 交互目标模型名称
+    */
+    std::string targetModelName = "";
+/**
+     * 交互目标实例名称
+    */
+    std::string targetInstanceName = "";
+    /**
+     * 交互目标实例ID
+    */
+    std::string targetInstanceID = "";
+
+    /**
+     * 当前动作状态
+    */
+    std::string currentActionState = "";
+    /**
+     * 目标动作状态
+    */
+    std::string targetActionState = "";
+    /**
+     * 时间戳
+    */
+    double timestamp = 0.0;  // unit: s
+    /**
+     * 帧ID
+     */
+    uint   frameID = 0;
+
+    std::string toString(){
+        nlohmann::json j;
+        j["LGesture"] = GestureNames[(int)curLGesture];
+        j["RGesture"] = GestureNames[(int)curRGesture];
+        j["interactionType"] = interactionType;
+        j["targetModelName"] = targetModelName;
+        j["targetInstanceName"] = targetInstanceName;
+        j["targetInstanceID"] = targetInstanceID;
+        j["currentActionState"] = currentActionState;
+        j["targetActionState"] = targetActionState;
+        j["timestamp"] = timestamp;
+        j["frameID"] = frameID;
+        return j.dump();
+    }
+};
 /**
  * FrameData
  * 存放每一帧刷新的数据，主要是传感器获取的数据
@@ -353,6 +457,8 @@ public:
 
     cv::Vec3f tip_velocity;
     std::string tip_movement = ""; // valid value: up, down
+
+    InteractionLog interactionLog;
     
     //指定的帧数据是否已经上传到服务器, key可以是"RGB0","RGB1",...,"Depth0","Depth1",...
     bool hasUploaded(const std::string& key) const;
@@ -582,45 +688,7 @@ typedef std::shared_ptr<SceneData>  SceneDataPtr;
 typedef std::shared_ptr<AppData>   AppDataPtr;
 
 
-/**
- * 单手原子手势类别
-*/
-enum Gesture{
-    ZOOM,GRASP,CURSOR,UNDEFINED
-};
-const std::string GestureNames[] = {"ZOOM", "GRASP", "CURSOR", "UNDEFINED"};
 
-enum Hands{
-    LEFT,RIGHT
-};
-
-class GestureUnderstandingData{
-public:
-    /**
-     * 当前左手手势
-    */
-    Gesture curLGesture=Gesture::UNDEFINED;
-    /**
-     * 当前右手手势
-    */
-    Gesture curRGesture=Gesture::UNDEFINED;
-    /**
-     * 最大缩放距离
-     */
-    float MAX_ZOOM_DISTANCE=0.15;
-    /**
-     * 最小缩放距离
-     */
-    float MIN_ZOOM_DISTANCE=0.05;
-    /**
-     * 缩放速度
-     */
-    float ZOOM_SPEED=0.01;
-    /**
-     * 最小缩放尺度
-     */
-    float MIN_ZOOM_SCALE=0.5;
-};
 
 /**
  * Collision box types
