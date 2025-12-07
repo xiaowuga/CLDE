@@ -122,9 +122,85 @@ static glm::mat4 GetTransMatFromRT(const cv::Vec3d &rvec,const cv::Vec3d &tvec,c
     return trans;
 }
 
+
+std::vector<glm::mat4> interpolatePose(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
+    std::vector<glm::mat4> path;
+
+    // 保护措施：如果步数太少，直接返回终点或起点
+    if (steps <= 0) return path;
+    if (steps == 1) {
+        path.push_back(startMat);
+        return path;
+    }
+
+    // 预分配内存，防止频繁 realloc
+    path.reserve(steps);
+
+    // -------------------------------------------------
+    // 1. 提取基础数据 (分解)
+    // -------------------------------------------------
+    // 提取位移 (GLM 第4列对应内存最后4个数，即你的最后一行)
+    glm::vec3 p0 = glm::vec3(startMat[3]);
+    glm::vec3 p1 = glm::vec3(endMat[3]);
+
+    // 提取旋转 (转为四元数)
+    glm::quat q0 = glm::quat_cast(startMat);
+    glm::quat q1 = glm::quat_cast(endMat);
+
+    // -------------------------------------------------
+    // 2. 循环生成插值
+    // -------------------------------------------------
+    for (int i = 0; i < steps; ++i) {
+        // 计算当前进度 t (从 0.0 到 1.0)
+        // i=0 时 t=0 (起点)
+        // i=steps-1 时 t=1 (终点)
+        float t = (float)i / (float)(steps - 1);
+
+        // A. 位置线性插值 (LERP)
+        glm::vec3 pt = glm::mix(p0, p1, t);
+
+        // B. 旋转球面插值 (SLERP)
+        // GLM 的 slerp 会自动处理最短路径
+        glm::quat qt = glm::slerp(q0, q1, t);
+
+        // C. 重组矩阵
+        glm::mat4 mat = glm::mat4_cast(qt); // 旋转部分
+        mat[3] = glm::vec4(pt, 1.0f);       // 位移部分 (填入最后4个float)
+
+        path.push_back(mat);
+    }
+    std::reverse(path.begin(), path.end());
+
+    return path;
+}
+
+
 int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
     std::string dataDir = appData.dataDir;
-    _detector.loadTemplate(dataDir + "templ_1.json");
+    _detector.loadTemplate(dataDir + "templ_2.json");
+    _detector2.loadTemplate(dataDir + "templ_3.json");
+//    marker = glm::make_mat4(new float[16]{
+//            1.00000000,
+//            0,
+//            0,
+//            0.00000000,
+//
+//            0,
+//            0.00000000,
+//            1.00000000,
+//            0.00000000,
+//
+//            0,
+//            -1.00000000,
+//            0,
+//            0.00000000,
+//
+//            -0.268250488,
+//            -0.897835083,
+//            0.588000000,
+//            1.00000000
+//    });
+
     marker = glm::make_mat4(new float[16]{
             1.00000000,
             0,
@@ -141,16 +217,17 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
             0,
             0.00000000,
 
-            -0.268250488,
-            -0.897835083,
-            0.588000000,
+            0.278194919,
+            -0.117810422,
+            0.515670925,
             1.00000000
     });
+    marker2 = marker;
 
     // 旋转角度
     float angleX = glm::radians(-90.0f);
     float angleY = glm::radians(180.0f);
-    float angleZ = glm::radians(-90.0f);
+    float angleZ = glm::radians(0.0f);
 
     // 分别绕各轴旋转
     glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -163,6 +240,11 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     marker_inv = glm::inverse(marker);
 //    marker = F * marker * F;
     markerPose = glm::mat4(1.0);
+    markerPose2 = glm::mat4(1.0);
+    diff = glm::mat4(1.0);
+    cache.clear();
+    lastTrans = glm::mat4(1.0);
+    trans = glm::mat4(1.0);
     return STATE_OK;
 }
 
@@ -189,15 +271,39 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
 
             markerPose = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
             trans = marker * glm::inverse( markerPose);
-            trans_inv = markerPose * marker_inv;
+//            trans_inv = markerPose * marker_inv;
+        }
+
+        if(_detector2.detect(img, camK, rvec, tvec)) {
+            cv::Vec3f rvec_float(rvec[0], rvec[1], rvec[2]);
+            cv::Vec3f tvec_float(tvec[0], tvec[1], tvec[2]);
+            markerPose2 = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
+            diff = glm::inverse(markerPose) * markerPose2;
         }
     }
 
 
     std::shared_lock<std::shared_mutex> _lock(_dataMutex);
-    frameDataPtr->viewRelocMatrix = trans_inv;
-    frameDataPtr->jointRelocMatrix = trans;
-    frameDataPtr->modelRelocMatrix =  glm::mat4(1.0);
+    if(cache.size()==0) {
+        cache = interpolatePose(lastTrans, trans,30);
+        lastTrans = trans;
+    }
+    frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());
+    frameDataPtr->jointRelocMatrix = cache.back();
+
+
+    float angleX = glm::radians(0.0f);
+    float angleY = glm::radians(180.0f);
+    float angleZ = glm::radians(90.0f);
+
+    // 分别绕各轴旋转
+    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), angleZ, glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
+
+    frameDataPtr->modelRelocMatrix =   marker  * diff  * rotationMatrix ;
+    cache.pop_back();
     return STATE_OK;
 }
 

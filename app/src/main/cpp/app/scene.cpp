@@ -5,6 +5,9 @@
 std::shared_ptr<IScene> createScene(const std::string &name, IApplication *app){
 
     std::shared_ptr<IScene> _createScene_AppVer2();
+    std::shared_ptr<IScene> _createScene_BuildMap();
+    std::shared_ptr<IScene> _createScene_MarkerLocation();
+
 
     struct DFunc{
         std::string name;
@@ -13,7 +16,8 @@ std::shared_ptr<IScene> createScene(const std::string &name, IApplication *app){
     };
 
     DFunc funcs[]= {
-            {"AppVer2",_createScene_AppVer2}
+            {"AppVer2",_createScene_AppVer2},
+            {"BuildMap", _createScene_BuildMap}
     };
 
     std::shared_ptr<IScene> ptr=nullptr;

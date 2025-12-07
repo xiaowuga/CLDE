@@ -3,6 +3,12 @@
 #include <string>
 using namespace cv;
 
+std::string matToString(const cv::Matx33f& m) {
+    std::stringstream ss;
+    ss << m;
+    return ss.str();
+}
+
 ARInputSources* ARInputSources::instance() {
     static ARInputSources *ptr=nullptr;
     if(!ptr)
@@ -41,8 +47,11 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         ARInputSources::instance()->get(frameData);
+
     }
     _lastTimestamp=frameData.timestamp;
+    auto cp = sceneData.getMainCamera();
+    cp->ARSelfPose = frameData.cameraMat;
 
     if(!frameData.img.empty())
     {
@@ -65,6 +74,8 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
 
         frameDataPtr->image.push_back(img);
         frameDataPtr->colorCameraMatrix=_camK;
+
+
     }
 
     sceneData.setData("ARInputs", frameData);

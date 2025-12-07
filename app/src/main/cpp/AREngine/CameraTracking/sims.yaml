@@ -1,0 +1,167 @@
+%YAML:1.0
+# new config
+
+path_dataset: /root/code/rgbd_vio_opencv4/dataset/
+path_results: /home/lab/workspace/wgy/ARTest_new/ARTest
+file_traj: test.txt
+path_traj: test.txt
+
+# 以上会被终端传参覆盖
+
+save_traj: 1
+has_gt: 1
+img_start: 0
+img_end: 0
+is_visualize: 1
+
+
+# depth params
+has_depth: 1  # tri_use_depth 同时修改
+depth_near: 10
+depth_far: 5000
+depth_thres: 1000
+depth_factor: 1000.0
+depth_filter: 1
+
+
+# chisquare check
+chisquare_file: chisquare_check.txt
+
+# imu initializer thresholds
+init_window_time: 0.75 # 两帧图像之间是0.03s
+init_imu_thresh: 0.20
+
+# motion initializer
+use_motion_init: 0
+use_init_optimization: 1
+optimize_init_scale: 0
+min_parallax: 15
+relative_corres: 20
+relative_parallax: 60
+
+## downsample
+downsample: 1 # 不可用！！
+down_in_track: 0
+
+## ESTIMATOR
+use_fej: 1
+use_imuavg: 1
+use_rk4int: 1
+calib_cam_extrinsics: 1
+calib_cam_intrinsics: 1
+calib_cam_timeoffset: 1 # 标记位
+max_clones: 13
+max_slam: 75
+max_slam_in_update: 50  # 迭代更新
+max_msckf_in_update: 999
+dt_slam_delay: 2
+feat_rep_msckf: GLOBAL_3D
+#feat_rep_slam: ANCHORED_FULL_INVERSE_DEPTH
+feat_rep_slam: GLOBAL_3D
+
+# sensor noise values / update
+# gyroscope_noise_density:  0.00018
+# gyroscope_random_walk: 0.00003
+# accelerometer_noise_density: 0.00111
+# accelerometer_random_walk: 0.00027
+up_msckf_sigma_px: 1
+up_msckf_chi2_multipler: 1
+up_msckf_use_mad: 0
+up_slam_sigma_px: 1
+up_slam_chi2_multipler: 1
+up_slam_use_mad: 0
+
+# zero velocity update params
+use_zupt: 0
+zupt_chi2_multipler: 2
+zupt_max_velocity: 0.3
+zupt_sigma_px: 1
+zupt_noise_multiplier: 50
+
+# STATE
+calib_camimu_dt: 0.0  # 初始值
+gravity: !!opencv-matrix
+  rows: 3
+  cols: 1
+  dt: d
+  data: [0.0, 0.0, 9.81]
+
+
+# tracker properties
+use_klt: 1  # 特征匹配部分简化掉了，只留下KLT
+num_pts: 250  # 帧与帧之间跟踪的特征数量
+#knn_ratio: 0.75
+fast_threshold: 15
+grid_x: 5
+grid_y: 3
+min_px_dist: 10
+multi_threading: 1
+tri_use_depth: 1  # triangulate_1d下不可用
+tri_min_dist: 0.20
+tri_max_dist: 200.0
+
+# camera intrinsics
+# cam_width: 640
+# cam_height: 480
+# cam_k: !!opencv-matrix
+#   rows: 4
+#   cols: 1
+#   dt: d
+#   data: [386.52, 387.32, 326.51, 237.40]
+# cam_d: !!opencv-matrix
+#   rows: 4
+#   cols: 1
+#   dt: d
+#   data: [-0.046, 0.035, 0.00017, -0.00025]
+
+# # camera-imu extrinsics
+# T_CtoI: !!opencv-matrix
+#   rows: 4
+#   cols: 4
+#   dt: d
+#   data: [
+#     0.999969, -0.0071841, 0.00319194, 0.027094,
+#     0.00720362, 0.999955, -0.0061454, 0.00443381,
+#     -0.00314766, 0.0061682, 0.999976, 0.015893,
+#     0, 0, 0, 1]
+
+# gyroscope_noise_density:  0.00018
+# gyroscope_random_walk: 0.00003
+# accelerometer_noise_density: 0.00111
+# accelerometer_random_walk: 0.00027
+gyroscope_noise_density:  0.0018836471899
+gyroscope_random_walk: 0.0000078605952
+accelerometer_noise_density: 0.009966944175
+accelerometer_random_walk: 0.00034490232097
+
+# camera intrinsics
+cam_width: 640
+cam_height: 480
+cam_k: !!opencv-matrix
+  rows: 4
+  cols: 1
+  dt: d
+  # data: [386.52, 387.32, 326.51, 237.40]
+  data: [385.128, 384.118, 326.371, 243.675] #new
+
+cam_d: !!opencv-matrix
+  rows: 4
+  cols: 1
+  dt: d
+  # data: [-0.046, 0.035, 0.00017, -0.00025]
+  data: [-0.05359723, 0.06271101, -0.00110631, 0.00006819] #new
+
+# imu->相机
+# camera-imu extrinsics
+T_CtoI: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: d
+  data: [ #first 3 rows are the old data
+    # 0.9999691, 0.00720362, -0.00314765, -0.02707507,
+    # -0.0071841, 0.99995517, 0.0061682, -0.004337,
+    # 0.00319195, -0.0061454, 0.99997602, -0.01595186,
+    0.999992,0.00109312,0.00376366,-0.0290748421102762,
+    -0.00110505,0.999994,0.00316796,-0.00731442356482148,
+    -0.00376018,-0.00317209,0.999988,-0.0156124634668231,
+    0., 0., 0., 1.]

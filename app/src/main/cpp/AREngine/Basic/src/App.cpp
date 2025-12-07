@@ -103,7 +103,7 @@ void ARApp::run(bool grabRequired)
                 {
                     rpcConnection->post(*serilizedFrame, _frameData, procs);
                 }
-                frameData->serilizedFramePtr = serilizedFrame;
+                _frameData->serilizedFramePtr = serilizedFrame;
             }
         }
 
