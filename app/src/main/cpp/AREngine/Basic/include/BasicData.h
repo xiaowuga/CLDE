@@ -384,7 +384,7 @@ public:
     /**
      * 时间戳
     */
-    double timestamp = 0.0;  // unit: s
+    std::string timestamp = "20251207_165730";  // unit: s
     /**
      * 帧ID
      */

@@ -133,6 +133,8 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
                 quaternionArray = anKeyframe.quaternionArray;
             }
         }
+        //高亮模型
+        highlightInstance(modelName, instanceId);
     }
 
 //    {//测试接口用代码，推力杆会动

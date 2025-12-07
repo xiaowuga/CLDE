@@ -11,6 +11,21 @@
 #include "InteractionConfigLoader.h"
 #include "Animator.h"
 #include "AnimationPlayer.h"
+
+std::string getCurrentTimestamp() {
+    // 获取当前时间点
+    auto now = std::chrono::system_clock::now();
+    // 转换为time_t
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    // 转换为本地时间
+    std::tm local_tm;
+    local_tm = *std::localtime(&now_time);
+    // 格式化
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", &local_tm);
+    return std::string(buffer);
+}
+
 #define LOG_TAG "MyCollisionHandlers.h"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 namespace MyCollisionHandlers {
@@ -79,9 +94,10 @@ namespace MyCollisionHandlers {
             _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
             _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
             _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
-            _frameDataPtr->interactionLog.timestamp = _frameDataPtr->timestamp;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
             _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
 
+            //LOGI("InteractionLog %s", _frameDataPtr->interactionLog.toString().c_str());
         }
     private:
         bool animationPlaying = false;
@@ -148,7 +164,7 @@ namespace MyCollisionHandlers {
             _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
             _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
             _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
-            _frameDataPtr->interactionLog.timestamp = _frameDataPtr->timestamp;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
             _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
@@ -241,7 +257,7 @@ namespace MyCollisionHandlers {
             _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
             _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
             _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
-            _frameDataPtr->interactionLog.timestamp = _frameDataPtr->timestamp;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
             _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
@@ -361,7 +377,7 @@ namespace MyCollisionHandlers {
             _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
             _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
             _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
-            _frameDataPtr->interactionLog.timestamp = _frameDataPtr->timestamp;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
             _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
@@ -448,7 +464,7 @@ namespace MyCollisionHandlers {
             _frameDataPtr->interactionLog.targetInstanceID = obj2->instanceId;
             _frameDataPtr->interactionLog.currentActionState = sceneData.actionPassage.originState;
             _frameDataPtr->interactionLog.targetActionState = sceneData.actionPassage.targetState;
-            _frameDataPtr->interactionLog.timestamp = _frameDataPtr->timestamp;
+            _frameDataPtr->interactionLog.timestamp = getCurrentTimestamp();
             _frameDataPtr->interactionLog.frameID = _frameDataPtr->frameID;
         }
     private:
