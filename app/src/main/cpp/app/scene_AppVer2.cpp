@@ -15,6 +15,7 @@
 //#include "RelacationGlass.h"
 //#include "PoseEstimationFetch.h"
 #include "Location.h"
+#include "CameraTracking.h"
 #include "PoseEstimationRokid.h"
 
 
@@ -45,12 +46,13 @@ namespace {
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
-        modules.push_back(createModule<Location>("Location"));  //用createModule创建模块，必须指定一个模块名，并且和server上的模块名对应！！
+        modules.push_back(createModule<Location>("Location"));
+//        modules.push_back(createModule<CameraTracking>("CameraTracking"));  //用createModule创建模块，必须指定一个模块名，并且和server上的模块名对应！！
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
-        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
-        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
-        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
-        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
+//        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
+//        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
+//        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
+//        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();
 
@@ -63,40 +65,27 @@ namespace {
         appData->animationActionConfigFile = appData->dataDir + "CockpitAnimationAction.json";
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
-        // we need to store this pointer in appData, we will use it when we want to set a new animator
-        appData->setData("AnimationPlayer", ptr);
+        // Map setting
+        appData->isLoadMap = true;
+        appData->isSaveMap = false;
 
-//        nlohmann::json instances_info_json;
-//        std::ifstream json_file(appData->dataDir + "InstanceInfo.json");
-//        json_file >> instances_info_json;
-//        // [ {"instanceId": string, "name": string, "matrixWorld": [float]}, {...}, ...]
-//        for (int i = 0; i < instances_info_json.size(); i++) {
-//            auto instance_info_json = instances_info_json[i];
-//            std::string object_name = instance_info_json.at("name").get<std::string>();
-//
-//            std::vector<float> model_mat = instance_info_json.at(
-//                    "matrixWorld").get<std::vector<float>>();
-//            if (model_mat.size() != 16) {
-//                std::cout << "number of elements in model matrix does not equal to 16!" << std::endl;
-//            }
-//            cv::Matx44f model_mat_cv;
-//            std::copy(model_mat.begin(), model_mat.begin() + 16, model_mat_cv.val);
-//            std::string model_name = prase_path(object_name);
-//            std::string mesh_file_name = appData->dataDir + "Models/" + model_name + "/" + model_name + ".obj";
-//            Pose transform(model_mat_cv);
-//            Pose initTransform(cv::Matx44f::eye());
-//            SceneObjectPtr ptr = std::make_shared<SceneObject>(object_name, mesh_file_name,initTransform, transform);
-//            sceneData->setObject(object_name, ptr);
-//        }
+        appData->record = true;
+
+        // we need to store this pointer in appData, we will use it when we want to set a new animator
+//        appData->setData("AnimationPlayer", ptr);
+
 
         std::vector<std::string> model_list = {
                                                 "di0", "di1", "di2", "di3", "di5",
                                                 "di7", "di8", "Marker",
 //                                                "monitaijia",
                                                 "ranyoukongzhi", "shang1(you)", "shang1",
-                                                "TUILIGAN", "YIBIAOPAN", "zhong1", "zhong2",
-                                                "zhongyou", "zhongzuo", "zhongzuo1"
-        };
+                                                "TUILIGAN",
+                                                "YIBIAOPAN",
+//                                               "Marker_YBP_TOP",
+//                                                "YIBIAOPAN_TOP",
+                                                "zhong1", "zhong2",
+                                                "zhongyou", "zhongzuo", "zhongzuo1"};
 
         for(int i = 0; i < model_list.size(); i++) {
             std::string model_name = model_list[i];
@@ -111,6 +100,15 @@ namespace {
             sceneData->setObject(model_name, ptr);
         }
 
+        std::vector<float> matrixModify = { 0.997789, -0.065480, 0.011375, 0.000000,
+        0.065318, 0.997766, 0.014002, 0.000000,
+        -0.012266, -0.013228, 0.999837, 0.000000,
+        754.634, -54.257, 498.184, 1.000000};
+//        cadDataManager::DataInterface::setActiveDocumentData("Marker_YBP_TOP");
+//        cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
+
+        cadDataManager::DataInterface::setActiveDocumentData("YIBIAOPAN");
+        cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
 
 
         std::shared_ptr<ARApp> app=std::make_shared<ARApp>();
@@ -158,7 +156,7 @@ namespace {
                     Rendering->project = project;
                     Rendering->view = view * frameDataPtr->viewRelocMatrix;
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
-                    //infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
+                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }

@@ -186,6 +186,7 @@ public:
 
     Pose         transform; //从初始变换到当前状态的变换
 
+    cv::Matx44f ARSelfPose; // AR眼镜内部获取的位姿。从相机坐标到世界坐标的齐次变换
     // virtual void Init() = 0;
     virtual void Init(){
         // default imply

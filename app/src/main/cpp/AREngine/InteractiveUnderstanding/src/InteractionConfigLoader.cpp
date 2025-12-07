@@ -54,8 +54,8 @@ CollisionDetectionPair::Ptr InteractionConfigLoader::GetCollisionPairAt(const in
 	CollisionBox obj1Box = _collisionBoxMapPtr->at(pairJson.at("Obj1Box").get<std::string>());
 	cv::Vec3f obj1Dir = cv::Vec3f(pairJson.at("Obj1Dir")[0].get<float>(), pairJson.at("Obj1Dir")[1].get<float>(), pairJson.at("Obj1Dir")[2].get<float>());
 	float obj1Radius = pairJson.at("Obj1Radius").get<float>();
-    std::string instance1 = pairJson.at("Instance1").get<string_t>();
-    std::string instanceId1 = pairJson.at("InstanceId1").get<string_t>();
+    std::string instance1 = pairJson.at("Instance1").get<std::string>();
+    std::string instanceId1 = pairJson.at("InstanceId1").get<std::string>();
 
     auto it = collisionDatas.find(obj1Name + "/" + instance1);
     CollisionData::Ptr obj1DataPtr;
@@ -75,8 +75,8 @@ CollisionDetectionPair::Ptr InteractionConfigLoader::GetCollisionPairAt(const in
 	CollisionBox obj2Box = _collisionBoxMapPtr->at(pairJson.at("Obj2Box").get<std::string>());
 	cv::Vec3f obj2Dir = cv::Vec3f(pairJson.at("Obj2Dir")[0].get<float>(), pairJson.at("Obj2Dir")[1].get<float>(), pairJson.at("Obj2Dir")[2].get<float>());
 	float obj2Radius = pairJson.at("Obj2Radius").get<float>();
-    std::string instance2 = pairJson.at("Instance2").get<string_t>();
-    std::string instanceId2 = pairJson.at("InstanceId2").get<string_t>();
+    std::string instance2 = pairJson.at("Instance2").get<std::string>();
+    std::string instanceId2 = pairJson.at("InstanceId2").get<std::string>();
     int originStateIndex = pairJson.at("InitialAnimationState").get<int>();
     auto it2 = collisionDatas.find(obj2Name + "/" + instance2);
     CollisionData::Ptr obj2DataPtr;

@@ -158,7 +158,7 @@ bool Application::initialize(const XrInstance instance, const XrSession session)
     const XrGraphicsBindingOpenGLESAndroidKHR *binding = reinterpret_cast<const XrGraphicsBindingOpenGLESAndroidKHR*>(mGraphicsPlugin->GetGraphicsBinding());
     mPlayer->initialize(binding->display);
 
-    m_scene_list={ "AppVer2"};
+    m_scene_list={ "AppVer2", "BuildMap"};
     m_current_scene=0;
 
     this->setCurrentScene(m_scene_list[m_current_scene]);

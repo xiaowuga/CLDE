@@ -62,7 +62,7 @@ target_link_libraries(GlobalLibs INTERFACE lib_opencv assimp)
 set(OPENXR_LOADER_H_DIR ${CMAKE_CURRENT_SOURCE_DIR}/openxr_loader/include)
 set(THIRD_PARTY_H_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-
+set(EIGEN3_INCLUDE_DIR ${THIRD_PARTY_H_DIR}/eigen)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -80,7 +80,9 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}
 )
 
 
-option(ENABLE_AppVer2 "enable AppVer2" ON)
+#option(ENABLE_AppVer2 "enable AppVer2" ON)
+#option(ENABLE_BuildMap "enable BuildMap" ON)
+#option(ENABLE_MarkerLocation "enable MarkerLocation" ON)
 option(USE_PREBUILT_LIB "use_prebuilt libraries instead of building from source" OFF)
 add_subdirectory(AREngine)
 
@@ -176,6 +178,7 @@ add_library(openxr_demo MODULE
         ${CMAKE_CURRENT_SOURCE_DIR}/app/recorder.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scenegui.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_AppVer2.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_BuildMap.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/templatePass.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/pbrPass.cpp
@@ -215,10 +218,12 @@ target_link_libraries(openxr_demo
         #**************************************************add Engine
         Basic
         GlobalLibs
-        cadDataManager
         Location
+        cadDataManager
+        MarkerLocation
         PoseEstimationRokid
         InteractiveUnderstanding
+        CameraTracking
         #**************************************************endof add Engine
 )
 
