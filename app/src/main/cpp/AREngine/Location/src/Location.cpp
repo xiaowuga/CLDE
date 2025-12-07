@@ -284,8 +284,13 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
 
 
     std::shared_lock<std::shared_mutex> _lock(_dataMutex);
+    static bool flag = true;
+    if(flag) {
+        lastTrans = trans;
+        flag = false;
+    }
     if(cache.size()==0) {
-        cache = interpolatePose(lastTrans, trans,30);
+        cache = interpolatePose(lastTrans, trans,1000);
         lastTrans = trans;
     }
     frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());

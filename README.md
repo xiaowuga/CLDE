@@ -49,10 +49,12 @@ AppVer2Data (appData.appDir)
 |-- CockpitAnimationAction.json     # 动画相关的JSON配置文件(新)
 |-- CockpitAnimationState.json      # 动画相关的JSON配置文件(新)
 |-- log.txt                         # 日志文件，记录系统运行日志
-|-- templ_1.json                    # 重定位模板文件1(目前使用)
+|-- templ_1.json                    # 重定位模板文件1()
 |-- marker_1.docx                   # 重定位模板文件1对应的marker打印文件
-|-- templ_2.json                    # 重定位模板文件2(备用)
+|-- templ_2.json                    # 重定位模板文件2(目前使用)
 |-- marker_2.docx                   # 重定位模板文件2对应的marker打印文件
+|-- templ_3.json                    # 重定位模板文件3(目前使用)
+|-- marker_3.pdf                   # 重定位模板文件3对应的marker打印文件
 ```
 ## 编译步骤
 
