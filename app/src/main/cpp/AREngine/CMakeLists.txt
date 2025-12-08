@@ -8,4 +8,5 @@ add_subdirectory(CameraTracking)
 add_subdirectory(MarkerLocation)
 add_subdirectory(PoseEstimationRokid)
 add_subdirectory(InteractiveUnderstanding)
+add_subdirectory(InteractionLogUpload)
 

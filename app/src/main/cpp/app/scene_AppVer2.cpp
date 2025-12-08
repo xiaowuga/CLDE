@@ -23,6 +23,7 @@
 #include "CollisionDetection.h"
 #include "AnimationPlayer.h"
 #include "MyCollisionHandlers.h"
+#include "InteractionLogUpload.h"
 
 #include "RenderingGlass/RenderClient.h"
 
@@ -49,10 +50,12 @@ namespace {
         modules.push_back(createModule<Location>("Location"));
 //        modules.push_back(createModule<CameraTracking>("CameraTracking"));  //用createModule创建模块，必须指定一个模块名，并且和server上的模块名对应！！
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
-//        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
-//        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
-//        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
-//        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
+        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
+        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
+        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
+        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
+        modules.push_back(createModule<InteractionLogUpload>("InteractionLogUpload"));
+
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();
 
@@ -72,7 +75,7 @@ namespace {
         appData->record = true;
 
         // we need to store this pointer in appData, we will use it when we want to set a new animator
-//        appData->setData("AnimationPlayer", ptr);
+        appData->setData("AnimationPlayer", ptr);
 
 
         std::vector<std::string> model_list = {

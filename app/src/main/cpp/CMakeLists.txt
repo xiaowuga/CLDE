@@ -224,6 +224,7 @@ target_link_libraries(openxr_demo
         PoseEstimationRokid
         InteractiveUnderstanding
         CameraTracking
+        InteractionLogUpload
         #**************************************************endof add Engine
 )
 

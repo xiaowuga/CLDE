@@ -179,27 +179,6 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     std::string dataDir = appData.dataDir;
     _detector.loadTemplate(dataDir + "templ_2.json");
     _detector2.loadTemplate(dataDir + "templ_3.json");
-//    marker = glm::make_mat4(new float[16]{
-//            1.00000000,
-//            0,
-//            0,
-//            0.00000000,
-//
-//            0,
-//            0.00000000,
-//            1.00000000,
-//            0.00000000,
-//
-//            0,
-//            -1.00000000,
-//            0,
-//            0.00000000,
-//
-//            -0.268250488,
-//            -0.897835083,
-//            0.588000000,
-//            1.00000000
-//    });
 
     marker = glm::make_mat4(new float[16]{
             1.00000000,
