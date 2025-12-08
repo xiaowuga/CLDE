@@ -63,6 +63,24 @@ AppVer2Data (appData.appDir)
 3. 使用 Android Studio 打开项目，第三方库会通过cmake自动从github上面拉取，请确保VPN是稳定的。
 4. 点击编译运行。
 
+## 关闭交互及其日志传输
+
+下面是整理好的 Markdown 表格，你可以直接复制使用：
+
+| 模块名称 | 代码中的类 (Class) | 状态建议 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **基础输入** | `ARInputs` | **开启** | 处理传感器、按键等基础输入，系统运行的基础，通常必须保留。 |
+| **定位/SLAM** | `Location` | **开启** | 处理设备在世界坐标系中的空间位置。 |
+| **相机追踪** | `CameraTracking` | 关闭 | 代码中原本已注释，通常用于基于视觉的 SLAM 或物体追踪。 |
+| **姿态估计** | `PoseEstimationRokid` | **开启** | 处理设备或头部的 6DoF 姿态数据，是 AR 渲染对齐的基础。 |
+| **手势交互** | `GestureUnderstanding` | **关闭** | **(交互核心)** 识别用户的手势操作。关闭后将无法通过手势控制应用。 |
+| **碰撞检测** | `CollisionDetection` | **关闭** | **(交互核心)** 处理虚拟物体与手或环境的物理碰撞。关闭后无物理反馈。 |
+| **动画播放** | `AnimationPlayer` | 开启/关闭 | 播放 3D 动画。<br>• **关闭**：如果动画仅在交互发生时触发。<br>• **开启**：如果有背景循环动画。 |
+| **日志上传** | `InteractionLogUpload` | **关闭** | **(日志核心)** 负责将交互日志数据通过 Socket 发送到服务器。关闭后将停止数据上传。 |
+
+### 💡 操作提示
+
+在 C++ 代码中，“关闭”某个模块的操作通常是将对应的 `modules.push_back(...)` 行**注释掉**（在该行最前面加 `//`）。
 
 ## 谷歌网盘下载连接:
 AppVer2Data下载：[AppVer2Data.zip](https://drive.google.com/uc?export=download&id=1vk_Bwio-3JN8-eiqQd9wS8amkkf2D3hy)

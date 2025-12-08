@@ -34,6 +34,7 @@ int AnimationPlayer::Init(AppData& appData, SceneData& sceneData, FrameDataPtr f
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+    appData.setData("AnimationPlayer", this);
     return STATE_OK;
 }
 

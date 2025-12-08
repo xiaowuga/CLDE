@@ -42,22 +42,22 @@ namespace {
         }
     }
 
+
     std::shared_ptr<ARApp> construct_engine(){
         std::string appName="Relocation"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
         modules.push_back(createModule<Location>("Location"));
-//        modules.push_back(createModule<CameraTracking>("CameraTracking"));  //用createModule创建模块，必须指定一个模块名，并且和server上的模块名对应！！
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
         modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
         modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
         modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
-        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
-        modules.push_back(createModule<InteractionLogUpload>("InteractionLogUpload"));
+//        modules.push_back(createModule<InteractionLogUpload>("InteractionLogUpload"));
 
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();
+
 
         appData->argc=1;
         appData->argv=nullptr;
@@ -73,20 +73,12 @@ namespace {
         appData->isSaveMap = false;
 
         appData->record = true;
-
-        // we need to store this pointer in appData, we will use it when we want to set a new animator
-        appData->setData("AnimationPlayer", ptr);
-
-
-        std::vector<std::string> model_list = {
-                                                "di0", "di1", "di2", "di3", "di5",
+        
+        std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
                                                 "di7", "di8", "Marker",
-//                                                "monitaijia",
                                                 "ranyoukongzhi", "shang1(you)", "shang1",
                                                 "TUILIGAN",
                                                 "YIBIAOPAN",
-//                                               "Marker_YBP_TOP",
-//                                                "YIBIAOPAN_TOP",
                                                 "zhong1", "zhong2",
                                                 "zhongyou", "zhongzuo", "zhongzuo1"};
 
@@ -107,8 +99,6 @@ namespace {
         0.065318, 0.997766, 0.014002, 0.000000,
         -0.012266, -0.013228, 0.999837, 0.000000,
         754.634, -54.257, 498.184, 1.000000};
-//        cadDataManager::DataInterface::setActiveDocumentData("Marker_YBP_TOP");
-//        cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
 
         cadDataManager::DataInterface::setActiveDocumentData("YIBIAOPAN");
         cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
