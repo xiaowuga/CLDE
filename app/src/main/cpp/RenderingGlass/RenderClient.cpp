@@ -89,17 +89,17 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
 
     // 设置渲染顺序（先环境贴图转换，后PBR渲染）
-    std::vector<std::string> passOrder = {
-            "equirectangularToCubemap",
-            "irradiance",
-            "prefilter",
-            "brdf",
-            "SSAOGeometry",
-            "SSAO",
-            "shadowMappingDepth",
-            "pbr",
-            "background"};
-//    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
+//    std::vector<std::string> passOrder = {
+//            "equirectangularToCubemap",
+//            "irradiance",
+//            "prefilter",
+//            "brdf",
+//            "SSAOGeometry",
+//            "SSAO",
+//            "shadowMappingDepth",
+//            "pbr",
+//            "background"};
+    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
     passManager.setPassOrder(passOrder);
 
     startTime = std::chrono::high_resolution_clock::now();

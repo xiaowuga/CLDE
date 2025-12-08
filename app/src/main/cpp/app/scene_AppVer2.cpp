@@ -73,7 +73,7 @@ namespace {
         appData->isSaveMap = false;
 
         appData->record = true;
-        
+
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
                                                 "di7", "di8", "Marker",
                                                 "ranyoukongzhi", "shang1(you)", "shang1",
@@ -131,6 +131,7 @@ namespace {
             return true;
         }
         virtual void renderFrame(const XrPosef &pose,const glm::mat4 &project,const glm::mat4 &view,int32_t eye){ //由于接口更改，以前的renderFrame函数不再适用，换用以下写法(2025-06-17)
+            auto start_time = std::chrono::high_resolution_clock::now();
             auto frameData=std::make_shared<FrameData>();
 
             if (_eng) {
@@ -149,11 +150,22 @@ namespace {
                     Rendering->project = project;
                     Rendering->view = view * frameDataPtr->viewRelocMatrix;
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
-                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
+//                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }
+            auto end_time = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
 
+            if (duration > 0) {
+                // 1秒 = 1,000,000 微秒
+                double instantFPS =  1000000.0 / duration;
+                double timeMs = duration / 2000.0;
+                std::string fps = std::to_string(instantFPS / 2);
+                // 打印日志 (建议加上阈值，比如耗时超过 5ms 才打印，防止刷屏)
+                if(instantFPS / 2 < 20)
+                 infof(fps.c_str());
+            }
         }
 
         virtual void close(){
