@@ -29,9 +29,9 @@ void BrdfPass::initShader() {
 
     auto& passManager = RenderPassManager::getInstance();
     auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
-    GLuint captureFBO = equiPass->getCaptureFBO();
-    GLuint captureRBO = equiPass->getCaptureRbo();
-    GLuint envCubemap = equiPass->getEnvCubemap();
+    GLuint* captureFBO = equiPass->getCaptureFBO();
+    GLuint* captureRBO = equiPass->getCaptureRbo();
+    GLuint* envCubemap = equiPass->getEnvCubemap();
     glm::mat4 captureProjection = equiPass->getCaptureProjection();
     const glm::mat4* captureViews = equiPass->getCaptureViews();
     // pbr: generate a 2D LUT from the BRDF equations used.
@@ -48,8 +48,8 @@ void BrdfPass::initShader() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // then re-configure capture framebuffer object and render screen-space quad with BRDF shader.
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, *captureRBO);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mBrdfLUTTexture, 0);
 

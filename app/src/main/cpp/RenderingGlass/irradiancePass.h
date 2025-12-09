@@ -13,12 +13,14 @@ public:
 
     virtual bool render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m) override;
     virtual void render(const glm::mat4& p, const glm::mat4& v);
-    unsigned int getIrradianceMap() const {return mIrradianceMap;}
-protected:
     virtual void initShader() override;
     virtual void draw() override;
+    unsigned int getIrradianceMap() const {return mIrradianceMap;}
+    void setIrradianceMap(int i) {mIrradianceMap = mIrradianceMaps[i];}
+protected:
 private:
     void renderCube();
+    GLuint mIrradianceMaps[2];  // 两个Irradiance贴图
     unsigned int mIrradianceMap;
     unsigned int cubeVAO = 0;
     unsigned int cubeVBO = 0;

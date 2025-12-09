@@ -4,6 +4,8 @@ out vec4 FragColor;
 in vec3 WorldPos;
 
 uniform samplerCube environmentMap;
+uniform samplerCube environmentMap1;  // 第二个HDR贴图
+uniform int hdrTextureIndex;            // 选择使用哪个贴图 (0 或 1)
 
 const float PI = 3.14159265359;
 
@@ -29,7 +31,12 @@ void main()
             // tangent space to world
             vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
 
-            irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);
+            if (hdrTextureIndex == 0) {
+                irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);
+            } else {
+                irradiance += texture(environmentMap1, sampleVec).rgb * cos(theta) * sin(theta);
+            }
+            //irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);
             nrSamples++;
         }
     }

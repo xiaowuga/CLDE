@@ -27,10 +27,21 @@ void IrradiancePass::initShader() {
     fragmentShaderCode.push_back('\0');
     mShader.loadShader(vertexShaderCode.data(), fragmentShaderCode.data());
 
+    auto& passManager = RenderPassManager::getInstance();
+    auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
+    GLuint *captureFBO = equiPass->getCaptureFBO();
+    GLuint *captureRBO = equiPass->getCaptureRbo();
+    GLuint *envCubemap = equiPass->getEnvCubemap();
+    GLuint envCubemap0 = equiPass->getEnvCubemapByIndex(0);
+    GLuint envCubemap1 = equiPass->getEnvCubemapByIndex(1);
+    glm::mat4 captureProjection = equiPass->getCaptureProjection();
+    const glm::mat4* captureViews = equiPass->getCaptureViews();
+
     // pbr: create an irradiance cubemap, and re-scale capture FBO to irradiance scale.
     // --------------------------------------------------------------------------------
-    glGenTextures(1, &mIrradianceMap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, mIrradianceMap);
+    glGenTextures(2, mIrradianceMaps);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, mIrradianceMaps[0]);
     for (unsigned int i = 0; i < 6; ++i)
     {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
@@ -41,36 +52,65 @@ void IrradiancePass::initShader() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    auto& passManager = RenderPassManager::getInstance();
-    auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
-    GLuint captureFBO = equiPass->getCaptureFBO();
-    GLuint captureRBO = equiPass->getCaptureRbo();
-    GLuint envCubemap = equiPass->getEnvCubemap();
-    glm::mat4 captureProjection = equiPass->getCaptureProjection();
-    const glm::mat4* captureViews = equiPass->getCaptureViews();
+    glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, *captureRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, mIrradianceMaps[1]);
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, *captureRBO);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
 
     // pbr: solve diffuse integral by convolution to create an irradiance (cube)map.
     // -----------------------------------------------------------------------------
     mShader.use();
     mShader.setUniformInt("environmentMap", 0);
+    mShader.setUniformInt("environmentMap1", 1);
     mShader.setUniformMat4("projection", captureProjection);
+
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap1);
 
     glViewport(0, 0, 32, 32); // don't forget to configure the viewport to the capture dimensions.
-    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
+
+    // 渲染第一个Cubemap（对应第一个HDR贴图）
+    mShader.setUniformInt("hdrTextureIndex", 0);
+
     for (unsigned int i = 0; i < 6; ++i)
     {
         mShader.setUniformMat4("view", captureViews[i]);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mIrradianceMap, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mIrradianceMaps[0], 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         renderCube();
     }
+
+    // 渲染第二个Cubemap（对应第二个HDR贴图）
+    mShader.setUniformInt("hdrTextureIndex", 1);
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        mShader.setUniformMat4("view", captureViews[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mIrradianceMaps[1], 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        renderCube();
+    }
+
+    mIrradianceMap = mIrradianceMaps[1];
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 }
