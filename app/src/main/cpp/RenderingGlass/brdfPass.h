@@ -13,12 +13,12 @@ public:
 
     virtual bool render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m) override;
     virtual void render(const glm::mat4& p, const glm::mat4& v);
+    virtual void initShader() override;
+    virtual void draw() override;
     unsigned int getBrdfLUTTexture() const {return mBrdfLUTTexture;}
     renderShader getShader() const {return mShader;};
     void renderQuad();
 protected:
-    virtual void initShader() override;
-    virtual void draw() override;
 private:
 
     unsigned int mBrdfLUTTexture=0;

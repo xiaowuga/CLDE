@@ -27,21 +27,11 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
     mModel  = std::make_shared<renderModel>("test");
     mModel->shaderInit();
-//    sceneData.getObject<SceneModel>();
-//    mModel->loadFbModel("YIBIAOPAN.fb" ,appData.dataDir + "Models");
-//    mModel->loadFbModel(appData.dataDir + "Models/YIBIAOPAN.fb");
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di1.fb"));
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di2.fb"));
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di3.fb"));
-//    mModel->loadFbModel("TUILIGAN.fb","/storage/emulated/0/Download/FbModel");
 
     auto scene_virtualObjects = sceneData.getAllObjectsOfType<SceneModel>();
     for(int i = 0; i < scene_virtualObjects.size(); i ++){
         mModel->loadFbModel(scene_virtualObjects[i]->name, scene_virtualObjects[i]->filePath);
     }
-
-//    mModel->pushMeshFromCustomData();
-//    mModel->countIndiceSum();
 
     //加载模型的动画数据：Action + State
     cadDataManager::DataInterface::loadAnimationActionData(appData.animationActionConfigFile);
@@ -89,17 +79,17 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
 
     // 设置渲染顺序（先环境贴图转换，后PBR渲染）
-    std::vector<std::string> passOrder = {
-            "equirectangularToCubemap",
-            "irradiance",
-            "prefilter",
-            "brdf",
-            "SSAOGeometry",
-            "SSAO",
-            "shadowMappingDepth",
-            "pbr",
-            "background"};
-//    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
+//    std::vector<std::string> passOrder = {
+//            "equirectangularToCubemap",
+//            "irradiance",
+//            "prefilter",
+//            "brdf",
+//            "SSAOGeometry",
+//            "SSAO",
+//            "shadowMappingDepth",
+//            "pbr",
+//            "background"};
+    std::vector<std::string> passOrder = {"equirectangularToCubemap", "irradiance","prefilter","brdf","shadowMappingDepth","pbr","background"};
     passManager.setPassOrder(passOrder);
 
     startTime = std::chrono::high_resolution_clock::now();
@@ -193,9 +183,14 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     mPbrPass->render(project, view, joc);
 
     updateFrameCount();
-    auto testNum = getFps();
+//    auto testNum = getFps();
 //    testNum = getIndiceSum();
-    testNum = getFps();
+//    testNum = getFps();
+    if(frameCount == 1000){
+        auto& passManager = RenderPassManager::getInstance();
+        auto pbrPass = passManager.getPassAs<PbrPass>("pbr");
+        pbrPass->setLightChange(true);
+    }
 
     return STATE_OK;
 }
@@ -235,7 +230,7 @@ void RenderClient::updateFrameCount() {
         std::cout << "FPS: " << fps << std::endl;
 
         // 下一秒重置
-        frameCount = 0;
+//        frameCount = 0;
         startTime = currentTime;
     }
 }

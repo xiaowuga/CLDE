@@ -43,6 +43,8 @@ uniform vec3 lightColors[4];
 
 uniform vec3 camPos;
 
+uniform bool lightChange;//光照改变
+
 //shadow mapping use
 float ShadowCalculation(vec4 PosLightSpace)
 {
@@ -245,6 +247,9 @@ void main()
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2));
+    if(lightChange){
+        color *= 0.6;
+    }
 
     FragColor = vec4(color , 1.0);
 
