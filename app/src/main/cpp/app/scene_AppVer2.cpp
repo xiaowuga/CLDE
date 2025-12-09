@@ -24,6 +24,7 @@
 #include "AnimationPlayer.h"
 #include "MyCollisionHandlers.h"
 #include "InteractionLogUpload.h"
+#include "HDRSwitch.h"
 
 #include "RenderingGlass/RenderClient.h"
 
@@ -49,6 +50,7 @@ namespace {
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
         modules.push_back(createModule<Location>("Location"));
+//        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
         modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
         modules.push_back(createModule<CollisionDetection>("CollisionDetection"));

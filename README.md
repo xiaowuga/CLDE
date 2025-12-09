@@ -1,11 +1,12 @@
-# 应用验证2
-该项目是中国国家重点研发计划“基于微服务架构的增强/混合现实应用开发引擎研发及应用验证”中的应用验证部分。项目通过AR/MR交互方式，辅助飞机驾驶员学习如何操控大型飞机。
+# 驾驶舱布局设计评估
+该项目是中国国家重点研发计划“基于微服务架构的增强/混合现实应用开发引擎研发及应用验证”中的应用验证部分。项目通过AR/MR交互方式进行驾驶舱布局设计评估。
 
 ## 开发人员
 
 - 江敬恩(山东大学):项目主体框架与模块集成
 - 李子锐(山东大学):渲染模块
 - 古亦平(山东大学):渲染模块
+- 杨善浩(山东大学):光照估计模块
 - 李晶(西安交通大学):交互模块
 - 王怡雯(西安交通大学):交互模块
 - 袁右文(西安交通大学):交互模块
@@ -41,6 +42,7 @@ AppVer2Data (appData.appDir)
 |-- Models                          # 存放模型文件
 |-- shaders                         # 存放着色器文件
 |-- textures                        # 存放纹理文件
+|-- HDRSwitch                       # 存放光照估计资源文件
 |-- Animation.json                  # 动画相关的JSON配置文件(旧)
 |-- config.ini                      # 配置文件，存放基本设置
 |-- InstanceInfo.json               # 存放实例信息的JSON文件(旧)
@@ -51,9 +53,9 @@ AppVer2Data (appData.appDir)
 |-- log.txt                         # 日志文件，记录系统运行日志
 |-- templ_1.json                    # 重定位模板文件1()
 |-- marker_1.docx                   # 重定位模板文件1对应的marker打印文件
-|-- templ_2.json                    # 重定位模板文件2(目前使用)
+|-- templ_2.json                    # 重定位模板文件2(目前使用)，用于重定位相机位姿
 |-- marker_2.docx                   # 重定位模板文件2对应的marker打印文件
-|-- templ_3.json                    # 重定位模板文件3(目前使用)
+|-- templ_3.json                    # 重定位模板文件3(目前使用)，
 |-- marker_3.pdf                   # 重定位模板文件3对应的marker打印文件
 ```
 ## 编译步骤
@@ -71,6 +73,7 @@ AppVer2Data (appData.appDir)
 | :--- | :--- | :--- | :--- |
 | **基础输入** | `ARInputs` | **开启** | 处理传感器、按键等基础输入，系统运行的基础，通常必须保留。 |
 | **眼镜SLAM** | `Location` | **开启** | 开启表示使用眼镜的SLAM定位。 |
+| **光照估计**  | `HDRSwitch` | **关闭** | 代码中原本已注释，开启表示使用光照估计。 |
 | **自动化所SLAM** | `CameraTracking` | **关闭** | 代码中原本已注释，开启表示使用自动化所的SLAM定位 |
 | **姿态估计** | `PoseEstimationRokid` | **开启** | 开启表示使用Rokid的关节点识别。 |
 | **手势交互** | `GestureUnderstanding` | **开启** | **(交互核心)** 识别用户的手势操作。关闭后将无法通过手势控制应用。 |
@@ -81,6 +84,20 @@ AppVer2Data (appData.appDir)
 ### 💡 操作提示
 
 在 C++ 代码中，“关闭”某个模块的操作通常是将对应的 `modules.push_back(...)` 行**注释掉**（在该行最前面加 `//`）。
+
+
+### 云端服务器连接配置
+
+请在 `src/main/cpp/app/scene_AppVer2.cpp` 文件中，定位到 `SceneAppVer2::initialize` 函数，执行以下修改：
+
+1. **取消注释**：找到代码行 `_eng->connectServer("YOUR SERVER IP", portID);` 并取消注释。
+2. **配置参数**：将 `"YOUR SERVER IP"` 和 `portID` 替换为您实际的服务器 IP 地址及端口号。
+
+> **依赖说明**：
+> * 以下模块依赖云端服务器连接：**光照估计 (HDRSwitch)**、**自动化所 SLAM (CameraTracking)** 以及 **日志上传 (InteractionLogUpload)**。
+> * **注意**：通常情况下，日志上传服务会使用独立的服务器地址，与 HDR 或 SLAM 模块的服务器不同，请根据实际情况配置。
+
+**本仓库不包含云端服务的代码。**
 
 ## 谷歌网盘下载连接:
 AppVer2Data下载：[AppVer2Data.zip](https://drive.google.com/uc?export=download&id=1vk_Bwio-3JN8-eiqQd9wS8amkkf2D3hy)

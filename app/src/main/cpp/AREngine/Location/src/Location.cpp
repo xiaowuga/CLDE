@@ -269,7 +269,7 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
         flag = false;
     }
     if(cache.size()==0) {
-        cache = interpolatePose(lastTrans, trans,1000);
+        cache = interpolatePose(lastTrans, trans,30);
         lastTrans = trans;
     }
     frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());

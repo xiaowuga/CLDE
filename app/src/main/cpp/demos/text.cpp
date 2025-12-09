@@ -1,6 +1,7 @@
 #include "text.h"
 #include "utils.h"
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
 
 Shader Text::mShader;
 void Text::initShader() {
@@ -132,6 +133,8 @@ bool Text::initialize() {
 
 bool Text::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m, const wchar_t* text, int32_t length, const glm::vec3& color) {
     mShader.use();
+    GL_CALL(glEnable(GL_BLEND));
+    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     mShader.setUniformMat4("projection", p);
     mShader.setUniformMat4("view", v);
     mShader.setUniformMat4("model", m);
@@ -185,6 +188,89 @@ bool Text::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m, co
     }
     GL_CALL(glBindVertexArray(0));
     GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
+
+    GL_CALL(glDisable(GL_BLEND));
+
+    return true;
+}
+
+
+bool Text::render(float x, float y, float user_scale, const wchar_t* text, int32_t length, const glm::vec3& color) {
+
+    mShader.use();
+
+    GL_CALL(glEnable(GL_BLEND));
+    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    GL_CALL(glDisable(GL_DEPTH_TEST)); // 保证文字在最上层
+    GL_CALL(glDepthMask(GL_FALSE));    // 关闭深度写入
+    // P 和 V 设为单位矩阵 (去除 3D 透视)
+    glm::mat4 p = glm::mat4(1.0f);
+    glm::mat4 v = glm::mat4(1.0f);
+
+    // M 矩阵负责位置和修正长宽比
+    glm::mat4 m = glm::mat4(1.0f);
+    m = glm::translate (m, glm::vec3(x, y, 0.0f));
+    float aspectRatio = 1920.0f / 1200.0f;
+
+    m = glm::scale(m, glm::vec3(user_scale / aspectRatio, user_scale, 1.0f));
+    mShader.setUniformMat4("projection", p);
+    mShader.setUniformMat4("view", v);
+    mShader.setUniformMat4("model", m);
+    mShader.setUniformVec3("textColor", color);
+
+    GL_CALL(glBindVertexArray(mVAO));
+
+    float scale = 0.001f;
+    float xpos = 0.0f;
+    float ypos = 0.0f;
+    for (int32_t i = 0; i < length; ++i) {
+        wchar_t ch = text[i];
+        if (ch == L' ') {
+            xpos += 60 * scale;
+            continue;
+        }
+        auto it = mWordsMap.find(ch);
+        if (it == mWordsMap.end()) {
+            loadFaces(text + i, length - i);
+            i--;
+            continue;
+        } else {
+            Word word = it->second;
+
+            GLfloat w = word.bitmap_width * scale;
+            GLfloat h = word.bitmap_top * scale;
+
+            xpos += word.bitmap_left * scale;
+
+            GLfloat vertices[][5] = {
+                    { xpos,     ypos + h, 0.0,   0.0, 0.0 },
+                    { xpos,     ypos,     0.0,   0.0, 1.0 },
+                    { xpos + w, ypos,     0.0,   1.0, 1.0 },
+
+                    { xpos,     ypos + h, 0.0,   0.0, 0.0 },
+                    { xpos + w, ypos,     0.0,   1.0, 1.0 },
+                    { xpos + w, ypos + h, 0.0,   1.0, 0.0 }
+            };
+
+            GL_CALL(glActiveTexture(GL_TEXTURE0));
+            GL_CALL(glBindTexture(GL_TEXTURE_2D, word.textureId));
+            //glUniform1i(m_SamplerLoc, 0);
+
+            GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, mVBO));
+            GL_CALL(glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices));
+            GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, 0));
+            GL_CALL(glDrawArrays(GL_TRIANGLES, 0, 6));
+
+            xpos += w;
+        }
+    }
+    GL_CALL(glBindVertexArray(0));
+    GL_CALL(glBindTexture(GL_TEXTURE_2D, 0));
+
+
+    GL_CALL(glDepthMask(GL_TRUE));
+    GL_CALL(glEnable(GL_DEPTH_TEST));
+    GL_CALL(glDisable(GL_BLEND));
 
     return true;
 }

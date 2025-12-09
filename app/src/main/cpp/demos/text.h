@@ -21,6 +21,7 @@ public:
     ~Text();
     bool initialize();
     bool render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m, const wchar_t* text, int32_t length, const glm::vec3& color);
+    bool render(float x, float y, float scale, const wchar_t* text, int32_t length, const glm::vec3& color);
 private:
     void initShader();
     void loadFaces(const wchar_t* text, int32_t length);

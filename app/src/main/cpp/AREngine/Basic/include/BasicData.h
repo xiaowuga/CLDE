@@ -632,6 +632,8 @@ public:
 
     std::atomic<bool> _continue;
 
+    int  environmentalState;
+
     Params params;
 
     std::string rootDir;
