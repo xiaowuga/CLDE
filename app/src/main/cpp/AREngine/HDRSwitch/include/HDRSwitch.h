@@ -24,7 +24,7 @@ public:
 
     int ShutDown(AppData& appData,  SceneData& sceneData) override;
 private:
-    int environmentalState
+    int environmentalState;
 };
 
 #endif 

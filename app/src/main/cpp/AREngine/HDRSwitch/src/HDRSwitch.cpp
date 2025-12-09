@@ -38,7 +38,8 @@ int HDRSwitch::ProRemoteReturn(RemoteProcPtr proc) {
     auto& ret = proc->ret;
     auto cmd = send.getd<std::string>("cmd");
     if (cmd == "HDRSwitchGlass") {
-        environmentalState = send.getd<int>("environmentalState", 0);
+        environmentalState = ret.getd<int>("environmentalState", 0);
+//        LOGI()
     }
     return STATE_OK;
 }
