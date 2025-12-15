@@ -27,6 +27,8 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
 
     mModel  = std::make_shared<renderModel>("test");
     mModel->shaderInit();
+    mTextRender = std::make_shared<Text>();
+    mTextRender->initialize();
 //    sceneData.getObject<SceneModel>();
 //    mModel->loadFbModel("YIBIAOPAN.fb" ,appData.dataDir + "Models");
 //    mModel->loadFbModel(appData.dataDir + "Models/YIBIAOPAN.fb");
@@ -194,10 +196,13 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     mGizmoPass->render(project, view);
     mPbrPass->render(project, view, joc);
 
+
+    wchar_t text[1024] = {0};
+    std::string fps_str = std::to_string(int(getFps()));
+    swprintf(text, 1024, L"fps:%s",  fps_str.c_str());
+    mTextRender->render(0.5,0.5, 1.0, text, wcslen(text), glm::vec3(0.0, 1.0, 0.0));
     updateFrameCount();
-    auto testNum = getFps();
-//    testNum = getIndiceSum();
-    testNum = getFps();
+
 
     return STATE_OK;
 }

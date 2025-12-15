@@ -49,10 +49,6 @@ target_include_directories(CameraTracking ${LIB_TYPE}
 # find_package(Eigen3 3.3 REQUIRED)
 target_link_libraries(CameraTracking ${LIB_TYPE}
         ${GlobalLibs} Basic ARInput
-        # ${CMAKE_CURRENT_SOURCE_DIR}/asset/librvgVIOSystem.so
-        # ${CMAKE_CURRENT_SOURCE_DIR}/asset/libRGBD_PLANE_VIO.so
-        # GlobalLibs
-        # Eigen3::Eigen
 )
 
 set(CameraTracking_LIB_PATH ${SHARED_LIB} PARENT_SCOPE)

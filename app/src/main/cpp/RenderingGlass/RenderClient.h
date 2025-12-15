@@ -24,6 +24,7 @@
 #include "RenderingGlass/SSAOGeometryPass.h"
 #include "RenderingGlass/SSAOPass.h"
 #include "RenderingGlass/GizmoPass.h"
+#include "demos/text.h"
 
 class RenderClient : public ARModule {
 private:
@@ -39,6 +40,7 @@ private:
     std::shared_ptr<SSAOPass> mSSAOPass;
     std::shared_ptr<renderModel> mModel; // for test
     std::shared_ptr<GizmoPass> mGizmoPass;
+    std::shared_ptr<Text> mTextRender;
     int actionFrame = -1;
     std::vector<float> positionArray;
     std::vector<float> quaternionArray;

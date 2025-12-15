@@ -63,6 +63,7 @@ namespace {
 
         appData->argc=1;
         appData->argv=nullptr;
+
         appData->engineDir="./AREngine/";  // for test
         appData->dataDir="/storage/emulated/0/AppVer2Data/";        // for test
         appData->interactionConfigFile = "InteractionConfig.json";
@@ -77,7 +78,8 @@ namespace {
         appData->record = true;
 
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
-                                                "di7", "di8", "Marker",
+                                                "di7", "di8",
+//                                                "Marker",
                                                 "ranyoukongzhi", "shang1(you)", "shang1",
                                                 "TUILIGAN",
                                                 "YIBIAOPAN",
@@ -97,10 +99,10 @@ namespace {
             sceneData->setObject(model_name, ptr);
         }
 
-        std::vector<float> matrixModify = { 0.997789, -0.065480, 0.011375, 0.000000,
-        0.065318, 0.997766, 0.014002, 0.000000,
-        -0.012266, -0.013228, 0.999837, 0.000000,
-        754.634, -54.257, 498.184, 1.000000};
+        std::vector<float> matrixModify = { -0.049222, 0.998740, 0.009768, 0.000000,
+        0.956004, 0.044280, 0.289991, 0.000000,
+        0.289193, 0.023612, -0.956979, 0.000000,
+        0.0, 0.0, 1510.213, 1.000000};
 
         cadDataManager::DataInterface::setActiveDocumentData("YIBIAOPAN");
         cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
@@ -152,22 +154,22 @@ namespace {
                     Rendering->project = project;
                     Rendering->view = view * frameDataPtr->viewRelocMatrix;
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
-//                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
+                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }
             auto end_time = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
 
-            if (duration > 0) {
-                // 1秒 = 1,000,000 微秒
-                double instantFPS =  1000000.0 / duration;
-                double timeMs = duration / 2000.0;
-                std::string fps = std::to_string(instantFPS / 2);
-                // 打印日志 (建议加上阈值，比如耗时超过 5ms 才打印，防止刷屏)
-                if(instantFPS / 2 < 20)
-                 infof(fps.c_str());
-            }
+//            if (duration > 0) {
+//                // 1秒 = 1,000,000 微秒
+//                double instantFPS =  1000000.0 / duration;
+//                double timeMs = duration / 2000.0;
+//                std::string fps = std::to_string(instantFPS / 2);
+//                // 打印日志 (建议加上阈值，比如耗时超过 5ms 才打印，防止刷屏)
+//                if(instantFPS / 2 < 20)
+////                 infof(fps.c_str());
+//            }
         }
 
         virtual void close(){

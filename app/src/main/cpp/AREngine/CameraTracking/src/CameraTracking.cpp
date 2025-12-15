@@ -11,9 +11,12 @@
 #include <opencv2/core/eigen.hpp>
 #include <unistd.h>
 #include <thread>
+#include "ARInput.h"
 
 
 #include <cstring>  // for memcpy
+
+namespace fs = std::filesystem;
 
 cv::Matx44f convertMatToMatx(const cv::Mat& mat) {
     // 检查 cv::Mat 是否是 4x4 并且类型为 CV_32F
@@ -88,16 +91,77 @@ bool checkConstant(std::vector<cv::Mat> vAlignTransform){
     return true;
 }
 
+
+void clearDirectory(const std::string& dirPath) {
+    // 检查目录是否存在
+    if (fs::exists(dirPath)) {
+        // 遍历目录中的所有文件和子目录
+        for (const auto& entry : fs::directory_iterator(dirPath)) {
+            fs::remove_all(entry.path());  // 删除文件或目录
+        }
+    } else {
+        // 如果目录不存在，可以选择创建目录（可选）
+        fs::create_directories(dirPath);
+    }
+}
+
+
+
+
+void saveFrameDataWithPose(const std::string& debugOutputPath,
+                           double timestamp,
+                           const cv::Mat& imgColorBuffer,
+                           cv::Mat pose) {
+
+    std::string camDir = debugOutputPath + "/cam0/";
+    std::string rgbDir = camDir + "data/";
+    // 如果目录不存在则创建
+    fs::create_directories(camDir);
+    fs::create_directories(rgbDir);
+
+    // 格式化时间戳为字符串
+    std::stringstream ss;
+    // timestamp
+    ss << std::fixed << std::setprecision(6) << timestamp;
+    std::string timestampStr = ss.str();
+
+    std::string rgbFile = timestampStr + ".png";
+
+    // 构造文件路径
+    std::string rgbFilePath = rgbDir + rgbFile;
+    // 保存RGB图像
+    if (!cv::imwrite(rgbFilePath, imgColorBuffer)) {
+        return;
+    }
+
+
+    // 保存文件路径到文本文件
+    std::ofstream posesFile1(camDir + "/cam_timestamp.txt", std::ios::app);
+    if (posesFile1.is_open()) {
+        posesFile1 << timestampStr << "\n";
+        posesFile1.close();
+    }
+
+    std::ofstream posesFile2(camDir + "/data.csv", std::ios::app);
+    if (posesFile2.is_open()) {
+        posesFile2 << timestampStr << "," << rgbFile << "\n";
+        posesFile2.close();
+    }
+
+    std::ofstream posesFile3(camDir + "/pose.txt", std::ios::app);
+    if (posesFile3.is_open()) {
+        std::string res = get_tum_string(timestamp, pose);
+        posesFile3 << res;
+        posesFile3.close();
+    }
+}
+
+
+
 int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
 
-    // 服务器初始化参数传递
-    std::string engineDir;
-    try{
-        engineDir=appData.dataDir;
-    }catch(const std::bad_any_cast& e){
-        std::cout << e.what() << std::endl;
-    }
-    std::string trackingConfigPath = engineDir + "CameraTracking/config.json";
+
+    std::string trackingConfigPath = appData.dataDir + "CameraTracking/config.json";
 
     ConfigLoader crdr(trackingConfigPath);
     // 根据新增的 sensorType 配置决定是否使用深度
@@ -117,6 +181,9 @@ int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr fr
     alignTransformLast = cv::Mat::eye(4, 4, CV_32F);
 
     T_wc = cv::Mat::eye(4, 4, CV_32F);
+    capture_offline_data = true;
+    debug_output_path = appData.dataDir + "CameraTracking/GlassOfflineData";
+    clearDirectory(debug_output_path);
     return STATE_OK;
 }
 
@@ -131,11 +198,9 @@ int CameraTracking::Update(AppData &appData, SceneData &sceneData, FrameDataPtr 
     }
 
     time = frameDataPtr->timestamp;
-//    std::cout << "time: " << time << std::endl;
     timeBuffer = time;
 
-    if (true)
-    {
+    if (false) {
         //CameraPose cp;
         auto cp = sceneData.getMainCamera();
         cp->timestamp = timeBuffer;
@@ -178,6 +243,14 @@ int CameraTracking::Update(AppData &appData, SceneData &sceneData, FrameDataPtr 
 
     }  //hasImage
 
+    if (capture_offline_data) {
+        auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
+        cv::Matx44f vmat = frame_data.cameraMat; //计算marker位姿需要的相机pose,这个也需要发送
+        imgColor = frameDataPtr->image.front();
+        double indexFrame = frameDataPtr->timestamp;
+//        save_pose_as_tum(debug_output_path + "/poses.txt", indexFrame, cv::Mat(vmat));
+        saveFrameDataWithPose(debug_output_path, indexFrame, imgColor, cv::Mat(vmat));
+    }
     return STATE_OK;
 }
 
@@ -211,7 +284,6 @@ int CameraTracking::CollectRemoteProcs(SerilizedFrame& serilizedFrame, std::vect
     static double last_tframe = 0;
     if (frameDataPtr->timestamp < last_tframe)
     {
-        std::cerr << "tframe < last_tframe" << std::endl;
         return STATE_ERROR;
     }
     last_tframe = frameDataPtr->timestamp;
@@ -236,7 +308,6 @@ int CameraTracking::ProRemoteReturn(RemoteProcPtr proc){
         }
         // std::cout << "alignTransform: " << alignTransform << std::endl;
         frameID2RelocPose[ret.getd<int>("curFrameID")] = ret.getd<cv::Mat>("RelocPose");
-        std::cout << "frameID : " << ret.getd<int>("curFrameID") << std::endl;
 
     }
     return STATE_OK;

@@ -52,7 +52,7 @@ namespace {
             _eng=construct_engine();
             std::string dataDir = _eng->appData->dataDir;
 
-            _eng->connectServer("192.168.1.100", 1123);
+//            _eng->connectServer("192.168.1.100", 1123);
             _eng->start();
 
 
@@ -63,13 +63,10 @@ namespace {
 //
             if (_eng) {
                 auto frameData = _eng->frameData;
+
                 if (frameData) {
                     auto ccm = frameData->colorCameraMatrix;
                     int c = frameData->image[0].channels();
-//                    cv::Mat mat(ccm);
-                    std::stringstream ss;
-                    ss << c;
-                    infof(ss.str().c_str());
                 }
             }
 

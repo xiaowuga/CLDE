@@ -388,33 +388,8 @@ void Application::renderFrame(const XrPosef& pose, const glm::mat4& project, con
 //    render_ui(project,view,eye);
 //    mModel->render(project,view,glm::mat4(10.0));
     if(m_scene) {
-        static double s_accumulatedTimeMs = 0.0;     // 累计时间
-        static int s_frameCount = 0;
-        static int fps = 0;
-        auto start_time = std::chrono::high_resolution_clock::now();
-
         m_scene->renderFrame(pose, project, view, eye);
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-        wchar_t text[1024] = {0};
-//        swprintf(text, 1024, L"fps:%s",  fps.c_str());
-        s_accumulatedTimeMs += (duration / 1000.0);
-        s_frameCount++;
-        if (s_accumulatedTimeMs >= 100.0) {
-            // 计算平均 FPS = 总帧数 / 总秒数
-            double averageFPS = s_frameCount / (s_accumulatedTimeMs / 1000.0);
 
-            // 保留你的逻辑：除以2 (针对双目渲染)
-            fps = (int)(averageFPS / 2.0);
-
-
-            // 清零重新统计
-            s_accumulatedTimeMs = 0.0;
-            s_frameCount = 0;
-        }
-        std::string fps_s = std::to_string(fps);
-        swprintf(text, 1024, L"fps:%s",  fps_s.c_str());
-        mTextRender->render(0.5,0.5, 1.0, text, wcslen(text), glm::vec3(0.0, 1.0, 0.0));
     }
 }
 void Application::render_ui(const glm::mat4 &project,const glm::mat4 &view,int32_t eye){

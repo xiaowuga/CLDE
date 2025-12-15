@@ -90,12 +90,13 @@ private:
 
     bool has_shutdown = false;
 
-    bool debugging = true;
+    bool debugging = false;
     std::string debug_output_path = "./workspace";
     std::map<int, cv::Mat> frameID2RelocPose;
     const bool use_online_pose{true}; // true: 使用眼睛的输入位姿; false（仅用于测试）: 使用离线位姿文件输入位姿
     std::shared_ptr<PoseSwicher> pose_swicher_ptr;
     cv::Mat T_wc;
+    bool capture_offline_data;
 };
 
 // #include "CameraTracking.cpp"

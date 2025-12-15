@@ -29,7 +29,8 @@ public:
     std::string log_data;                       // 日志数据，在CollectRemoteProcs中填充
 
     // 假设的服务器配置
-    const std::string SERVER_IP = "192.168.31.9"; // 替换为你的目标IP
+//    const std::string SERVER_IP = "10.35.238.103"; // 我的笔记本
+    const std::string SERVER_IP = "10.35.237.23"; // 替换为你的目标IP
     const int SERVER_PORT = 1234;                 // 替换为你的目标端口
 
     // 辅助函数：确保所有字节都被发送（TCP 流式发送的常见问题）

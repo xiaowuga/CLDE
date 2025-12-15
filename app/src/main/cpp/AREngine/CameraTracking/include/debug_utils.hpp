@@ -15,8 +15,7 @@ std::string get_tum_string(double pose_timestamp, const cv::Mat& pose_)
     // transform the pose matrix to CV_32F
     cv::Mat pose;
     // std::cout << "pose_.type():" << pose_.type() << std::endl;
-    if (pose_.type() != CV_32F)
-    {
+    if (pose_.type() != CV_32F) {
         // std::cout << "pose_.type():" << pose_.type() << std::endl;
         pose_.convertTo(pose, CV_32F);
         // std::cout << "convert pose to CV_32F" << std::endl;
@@ -25,7 +24,8 @@ std::string get_tum_string(double pose_timestamp, const cv::Mat& pose_)
     {
         pose = pose_;
     }
-
+    cv::Mat pose_t = pose.t();
+    pose = pose_t;
     std::stringstream ss;
 
     ss << std::fixed;
@@ -61,6 +61,26 @@ void save_pose_as_tum(std::string output_file_path, double pose_timestamp, cv::M
     // std::cout << "get tum string: " << ret << std::endl;
     out_file << ret;
 }
+
+
+//inline void save_pose_as_tum(std::string output_file_path, uint64_t pose_timestamp, cv::Mat pose)
+//{
+//    std::string output_dir = output_file_path.substr(0, output_file_path.find_last_of("/"));
+//
+//    if (access(output_dir.c_str(), 0) == -1)
+//    {
+//        std::string cmd = "mkdir -p " + output_dir;
+//        int ret = system(cmd.c_str());
+//        if(ret != 0){
+//            std::cerr << "[save_pose_as_tum]Command execution failed with return code: " << ret << std::endl;
+//        }
+//    }
+//    std::ofstream out_file(output_file_path, std::ios::out|std::ios::app);
+//    std::string ret = get_tum_string(pose_timestamp, pose);
+//    // std::cout << "get tum string: " << ret << std::endl;
+//    out_file << ret;
+//}
+
 
 
 void onLBUTTONDOWN (int event, int x, int y, int flags, void *userdata) {

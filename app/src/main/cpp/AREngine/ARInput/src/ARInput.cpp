@@ -28,11 +28,21 @@ void ARInputSources::get(ARInputSources::FrameData &frameData, int mask) {
     frameData=_frameData;
 }
 
+double GetUnixTimestampWithMicros() {
+    // 获取当前系统时间点
+    auto now = std::chrono::system_clock::now();
 
+    // 获取自纪元以来的时长
+    auto duration = now.time_since_epoch();
+
+    // 转换为微秒 (microseconds)
+    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+
+    // 转为秒 (除以 1,000,000)
+    return micros / 1000000.0;
+}
 
 int ARInputs::Init(AppData& appData, SceneData& sceneData, FrameDataPtr frameDataPtr) {
-
-
 
     return STATE_OK;
 };
@@ -74,6 +84,7 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
 
         frameDataPtr->image.push_back(img);
         frameDataPtr->colorCameraMatrix=_camK;
+        frameDataPtr->timestamp = GetUnixTimestampWithMicros();
 
 
     }
