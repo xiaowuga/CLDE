@@ -83,6 +83,9 @@ struct IOpenXrProgram {
     // and removals, and to update the corresponding application logic.
     virtual void ProcessPlaneTracking() = 0;
 
+    // Handle Android Key Event
+    virtual void HandleAndroidKeyEvent(int32_t key_code, int32_t action) = 0;
+
     virtual void ProcessFrame() =0;
 
 

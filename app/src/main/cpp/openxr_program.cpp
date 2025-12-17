@@ -1555,6 +1555,48 @@ struct OpenXrProgram : IOpenXrProgram {
         m_application->processFrame();
     }
 
+    void HandleAndroidKeyEvent(int32_t key_code, int32_t action) override {
+        // Only handle key down events
+        if (action != 0) { // AKEY_EVENT_ACTION_DOWN = 0
+            return;
+        }
+
+        std::string key_name;
+        // Key mapping based on Android key codes
+        switch (key_code) {
+            case 23: // AKEYCODE_DPAD_CENTER
+            case 66: // AKEYCODE_ENTER
+            case 96: // AKEYCODE_BUTTON_A
+                key_name = "o";
+                break;
+            case 4:  // AKEYCODE_BACK
+            case 97: // AKEYCODE_BUTTON_B
+                key_name = "x";
+                break;
+            case 21: // AKEYCODE_DPAD_LEFT
+                key_name = "left";
+                break;
+            case 22: // AKEYCODE_DPAD_RIGHT
+                key_name = "right";
+                break;
+            case 19: // AKEYCODE_DPAD_UP
+                key_name = "up";
+                break;
+            case 20: // AKEYCODE_DPAD_DOWN
+                key_name = "down";
+                break;
+            default:
+                // Optional: log unknown keys
+                // Log::Write(Log::Level::Info, Fmt("Unknown key code: %d", key_code));
+                return;
+        }
+
+        if (m_application) {
+            m_application->keypadEvent(key_name);
+            Log::Write(Log::Level::Info, Fmt("HandleAndroidKeyEvent: Mapped %d to %s", key_code, key_name.c_str()));
+        }
+    }
+
     private:
         const Options m_options;
         std::shared_ptr<IPlatformPlugin> m_platformPlugin;
