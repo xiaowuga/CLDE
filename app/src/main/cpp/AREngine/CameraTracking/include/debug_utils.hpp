@@ -9,8 +9,7 @@
 #include <unistd.h> 
 
 
-std::string get_tum_string(double pose_timestamp, const cv::Mat& pose_)
-{
+std::string get_tum_string(double pose_timestamp, const cv::Mat& pose_) {
     // std::cout << "get_tum_string..." << std::endl;
     // transform the pose matrix to CV_32F
     cv::Mat pose;
@@ -24,8 +23,6 @@ std::string get_tum_string(double pose_timestamp, const cv::Mat& pose_)
     {
         pose = pose_;
     }
-    cv::Mat pose_t = pose.t();
-    pose = pose_t;
     std::stringstream ss;
 
     ss << std::fixed;

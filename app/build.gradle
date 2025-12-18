@@ -44,7 +44,7 @@ android {
         def versionName = variant.versionName
         def versionCode = variant.versionCode
         variant.outputs.all {
-            outputFileName = "RokidOpenXRAndroidDemo-v${versionName}.apk"
+            outputFileName = "CLDE-v${versionName}.apk"
         }
     }
 

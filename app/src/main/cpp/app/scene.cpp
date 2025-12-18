@@ -5,7 +5,7 @@
 std::shared_ptr<IScene> createScene(const std::string &name, IApplication *app){
 
     std::shared_ptr<IScene> _createScene_AppVer2();
-    std::shared_ptr<IScene> _createScene_BuildMap();
+    std::shared_ptr<IScene> _createScene_CLDE();
 
 
     struct DFunc{
@@ -16,7 +16,7 @@ std::shared_ptr<IScene> createScene(const std::string &name, IApplication *app){
 
     DFunc funcs[]= {
             {"AppVer2",_createScene_AppVer2},
-            {"BuildMap", _createScene_BuildMap}
+            {"CLDE", _createScene_CLDE}
     };
 
     std::shared_ptr<IScene> ptr=nullptr;
@@ -35,17 +35,5 @@ std::shared_ptr<IScene> createScene(const std::string &name, IApplication *app){
 }
 
 
-class SceneEmpty
-        :public IScene
-{
-public:
-    virtual bool initialize(const XrInstance instance, const XrSession session) {
-        return true;
-    }
-};
 
-std::shared_ptr<IScene> _createScene_empty()
-{
-    return std::make_shared<SceneEmpty>();
-}
 

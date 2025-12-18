@@ -119,50 +119,68 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
     //rotationMatrix作用得更早，因此应该放在右边
     m_markerPose_Cockpit = m_markerPose_Cockpit * rotationMatrix;
-
+    alignTransMap2CockpitFile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
     m_alignTrajectoryCache.clear();
-    m_lastAlignMatrix = glm::mat4(1.0f);
+    if(!appData.isLoadMap)
+        m_lastAlignMatrix = glm::mat4(1.0f);
+    else {
+        std::ifstream in(alignTransMap2CockpitFile);
+        float* pMat = glm::value_ptr(m_lastAlignMatrix);
+        for (int i = 0; i < 16; ++i) {
+            if (!(in >> pMat[i])) {
+                break; // 读取错误或文件结束
+            }
+        }
+        in.close();
+    }
     return STATE_OK;
 }
 
 int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
-    auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
-    // 相机(Head/Eye) 在 OpenXR 世界坐标系下的位姿
-    // frame_data.cameraMat是视图矩阵，inv(frame_data.cameraMat)才是相机位姿矩阵
-    glm::mat4 cameraPose_World = glm::inverse(frame_data.cameraMat);
 
-    if(!frameDataPtr->image.empty()){
-        cv::Mat img=frameDataPtr->image.front(); //相机图像
-        const cv::Matx33f &cameraIntrinsics = frameDataPtr->colorCameraMatrix; //相机内参
-        cv::Vec3d rvec, tvec;
-        if (m_arucoDetector.detect(img, cameraIntrinsics, rvec, tvec)) {
-            // 获取 Marker 在相机坐标系下的位姿 (OpenCV 格式)
-            cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
-            // 转换为 GLM 格式 (同时修正坐标轴方向)
-            glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
-            // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
-            glm::mat4 markerPose_World = cameraPose_World * markerPose_Camera_GLM;
-            if(glm::determinant(markerPose_World) != 0.0f) {
-                m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
+    if(!appData.isLoadMap) {
+        auto frame_data = std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
+        // 相机(Head/Eye) 在 OpenXR 世界坐标系下的位姿
+        // frame_data.cameraMat是视图矩阵，inv(frame_data.cameraMat)才是相机位姿矩阵
+        glm::mat4 cameraPose_World = glm::inverse(frame_data.cameraMat);
+
+        if (!frameDataPtr->image.empty()) {
+            cv::Mat img = frameDataPtr->image.front(); //相机图像
+            const cv::Matx33f &cameraIntrinsics = frameDataPtr->colorCameraMatrix; //相机内参
+            cv::Vec3d rvec, tvec;
+            if (m_arucoDetector.detect(img, cameraIntrinsics, rvec, tvec)) {
+                // 获取 Marker 在相机坐标系下的位姿 (OpenCV 格式)
+                cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
+                // 转换为 GLM 格式 (同时修正坐标轴方向)
+                glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
+                // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
+                glm::mat4 markerPose_World = cameraPose_World * markerPose_Camera_GLM;
+                if (glm::determinant(markerPose_World) != 0.0f) {
+                    m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
+                }
             }
+
         }
 
-    }
+        std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
+        static bool isFirstUpdate = true;
+        if (isFirstUpdate) {
+            m_lastAlignMatrix = m_worldAlignMatrix;
+            isFirstUpdate = false;
+        }
+        if (m_alignTrajectoryCache.empty()) {
+            m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix,
+                                                              30);
+            m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
+        }
 
-    std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
-    static bool isFirstUpdate = true;
-    if(isFirstUpdate) {
-        m_lastAlignMatrix = m_worldAlignMatrix;
-        isFirstUpdate = false;
+        glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
+        m_alignTrajectoryCache.pop_back();
+        frameDataPtr->alignTransMap2Cockpit = currentSmoothedAlign;
     }
-    if(m_alignTrajectoryCache.empty()) {
-        m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix, 30);
-        m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
+    else {
+        frameDataPtr->alignTransMap2Cockpit = m_lastAlignMatrix;
     }
-
-    glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
-    m_alignTrajectoryCache.pop_back();
-    frameDataPtr->alignTransMap2Cockpit = currentSmoothedAlign;
 
     return STATE_OK;
 }
@@ -178,5 +196,17 @@ int Location::ProRemoteReturn(RemoteProcPtr proc) {
 }
 
 int Location::ShutDown(AppData &appData,SceneData &sceneData){
+
+    if(!appData.isLoadMap && !appData.isOnlyUseMarkerLocation) {
+        std::ofstream out(alignTransMap2CockpitFile);
+
+        if (out.is_open()) {
+            const float *pSource = glm::value_ptr(m_lastAlignMatrix);
+            for (int i = 0; i < 16; ++i) {
+                out << pSource[i] << " ";
+            }
+            out.close();
+        }
+    }
     return STATE_OK;
 }

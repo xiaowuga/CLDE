@@ -27,6 +27,8 @@ public:
     glm::mat4 m_lastAlignMatrix;
     std::shared_mutex m_dataMutex;
 
+    std::string alignTransMap2CockpitFile;
+
 
 public:
 

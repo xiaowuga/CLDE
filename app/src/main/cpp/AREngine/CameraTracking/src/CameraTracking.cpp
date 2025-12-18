@@ -12,37 +12,12 @@
 #include <unistd.h>
 #include <thread>
 #include "ARInput.h"
-
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <cstring>  // for memcpy
 
 namespace fs = std::filesystem;
-
-cv::Matx44f convertMatToMatx(const cv::Mat& mat) {
-    // 检查 cv::Mat 是否是 4x4 并且类型为 CV_32F
-    if (mat.rows != 4 || mat.cols != 4 || mat.type() != CV_32F) {
-        throw std::invalid_argument("Input Mat must be 4x4 with type CV_32F.");
-    }
-
-    // 创建一个 Matx44f 对象
-    cv::Matx44f matx;
-
-    // 使用 memcpy 快速复制数据
-    std::memcpy(matx.val, mat.ptr<float>(), 16 * sizeof(float));
-
-    return matx;
-}
-
-
-inline glm::mat4 CV_Matx44f_to_GLM_Mat4(const cv::Matx44f &mat) {  // 将 cv::Matx44f 转换为 glm::mat4
-    return glm::mat4(
-            mat(0, 0), mat(0, 1), mat(0, 2), mat(0, 3),  // 第一行
-            mat(1, 0), mat(1, 1), mat(1, 2), mat(1, 3),  // 第二行
-            mat(2, 0), mat(2, 1), mat(2, 2), mat(2, 3),  // 第三行
-            mat(3, 0), mat(3, 1), mat(3, 2), mat(3, 3)   // 第四行
-    );
-}
-
 
 CameraTracking::CameraTracking() = default;
 
@@ -64,34 +39,6 @@ cv::Mat inv_T(cv::Mat pose){
     return T_inv;
 }
 
-
-bool checkConstant(std::vector<cv::Mat> vAlignTransform){
-    // std:: cout << "into checkConstant..." << std::endl;
-    cv::Mat v_tmp = cv::Mat_<float>(vAlignTransform.size(), 1);
-    for (int pos_index = 0 ;pos_index < 3; pos_index ++){
-        for (int i = 0; i < 30 * 5; i++)
-        {
-            // if conclude nan, return false
-            if (std::isnan(vAlignTransform[i].at<float>(pos_index, 3)))
-            {
-                return false;
-            }
-
-            v_tmp.at<float>(i, 0) = vAlignTransform[i].at<float>(pos_index, 3);
-            // debug
-            // std::cout << "v_tmp.at<float>(i, 0): " << v_tmp.at<float>(i, 0) << std::endl;
-        }
-        float var = cv::sum((v_tmp - cv::mean(v_tmp)).mul(v_tmp - cv::mean(v_tmp)))[0] / (30 * 5);
-        // debug
-        std::cout << "var: " << var << std::endl;
-        if (var > 0.01){
-            return false;
-        }
-    }
-    return true;
-}
-
-
 void clearDirectory(const std::string& dirPath) {
     // 检查目录是否存在
     if (fs::exists(dirPath)) {
@@ -108,12 +55,12 @@ void clearDirectory(const std::string& dirPath) {
 
 
 
-void saveFrameDataWithPose(const std::string& debugOutputPath,
+void saveFrameDataWithPose(const std::string& offlineDataDir,
                            double timestamp,
                            const cv::Mat& imgColorBuffer,
                            cv::Mat pose) {
 
-    std::string camDir = debugOutputPath + "/cam0/";
+    std::string camDir = offlineDataDir + "/cam0/";
     std::string rgbDir = camDir + "data/";
     // 如果目录不存在则创建
     fs::create_directories(camDir);
@@ -158,32 +105,120 @@ void saveFrameDataWithPose(const std::string& debugOutputPath,
 
 
 
-int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
+cv::Mat GLMPose2CVPoseMat(const glm::mat4& glmPose) {
+    // 1. 轴向修正 (右乘)
+    glm::mat4 axisFix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f));
+    glm::mat4 cvPoseGLM = glmPose * axisFix;
+
+    // 2. 转为 OpenCV Mat (注意转置问题)
+    cv::Mat cvMat = cv::Mat(4, 4, CV_32F);
+    // 这里利用 memcpy + transpose 技巧
+    // GLM(Col) -> memcpy -> OpenCV(Row) = 结果是转置矩阵
+    std::memcpy(cvMat.data, glm::value_ptr(cvPoseGLM), 16 * sizeof(float));
+
+    // 3. 显式转置以获得正确的 Row-Major 矩阵
+    return cvMat.t();
+}
+
+glm::mat4 CVPose2GLMPoseMat(cv::Mat cvMat) {
+    // 1. 确保输入是 float 类型，因为 GLM 默认是 float
+    cv::Mat cvMatFloat;
+    cvMat.convertTo(cvMatFloat, CV_32F);
+
+    // 2. 基础转换：OpenCV数据 -> GLM数据 (此时产生转置)
+    glm::mat4 glmMat = glm::make_mat4(cvMatFloat.ptr<float>());
+    glmMat = glm::transpose(glmMat);
+
+    // 3. 坐标系修正：OpenCV (Y-Down) -> OpenGL (Y-Up)
+    // 修正矩阵：绕X轴旋转180度 (Scale 1, -1, -1)
+    glm::mat4 yz_flip = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f));
+
+    // 4. 应用修正 (左乘)
+    return yz_flip * glmMat;
+}
 
 
-    std::string trackingConfigPath = appData.dataDir + "CameraTracking/config.json";
+std::vector<glm::mat4> GenerateInterpolatedPath(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
+    std::vector<glm::mat4> path;
 
-    ConfigLoader crdr(trackingConfigPath);
-    // 根据新增的 sensorType 配置决定是否使用深度
-    {
-        uint sensorType = crdr.getValue<int>("sensorType");  // 0=MONOCULAR, 2=RGBD
-        SerilizedObjs initCmdSend = {
-            {"cmd", std::string("init")},
-            {"isLoadMap", int(appData.isLoadMap)},
-            {"isSaveMap", int(appData.isSaveMap)},
-            {"sensorType", int(sensorType)}
-        };
-        app->postRemoteCall(this, nullptr, initCmdSend);
+    // 保护措施：如果步数太少，直接返回终点或起点
+    if (steps <= 0) return path;
+    if (steps == 1) {
+        path.push_back(startMat);
+        return path;
     }
 
-    hasImage = false;
+    // 预分配内存，防止频繁 realloc
+    path.reserve(steps);
+
+    // -------------------------------------------------
+    // 1. 提取基础数据 (分解)
+    // -------------------------------------------------
+    // 提取位移 (GLM 第4列对应内存最后4个数，即你的最后一行)
+    glm::vec3 p0 = glm::vec3(startMat[3]);
+    glm::vec3 p1 = glm::vec3(endMat[3]);
+
+    // 提取旋转 (转为四元数)
+    glm::quat q0 = glm::quat_cast(startMat);
+    glm::quat q1 = glm::quat_cast(endMat);
+
+    // -------------------------------------------------
+    // 2. 循环生成插值
+    // -------------------------------------------------
+    for (int i = 0; i < steps; ++i) {
+        // 计算当前进度 t (从 0.0 到 1.0)
+        // i=0 时 t=0 (起点)
+        // i=steps-1 时 t=1 (终点)
+        float t = (float)i / (float)(steps - 1);
+
+        // A. 位置线性插值 (LERP)
+        glm::vec3 pt = glm::mix(p0, p1, t);
+
+        // B. 旋转球面插值 (SLERP)
+        // GLM 的 slerp 会自动处理最短路径
+        glm::quat qt = glm::slerp(q0, q1, t);
+
+        // C. 重组矩阵
+        glm::mat4 mat = glm::mat4_cast(qt); // 旋转部分
+        mat[3] = glm::vec4(pt, 1.0f);       // 位移部分 (填入最后4个float)
+
+        path.push_back(mat);
+    }
+    std::reverse(path.begin(), path.end());
+
+    return path;
+}
+
+int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
+
+    SerilizedObjs initCmdSend = {
+        {"cmd", std::string("init")},
+        {"isLoadMap", int(appData.isLoadMap)},
+        {"isSaveMap", int(appData.isSaveMap)},
+        {"sensorType", 0} // 0=MONOCULAR, 2=RGBD
+    };
+    app->postRemoteCall(this, nullptr, initCmdSend);
+
     alignTransform = cv::Mat::eye(4, 4, CV_32F);
     alignTransformLast = cv::Mat::eye(4, 4, CV_32F);
 
-    T_wc = cv::Mat::eye(4, 4, CV_32F);
-    capture_offline_data = true;
-    debug_output_path = appData.dataDir + "CameraTracking/GlassOfflineData";
-    clearDirectory(debug_output_path);
+    offline_data_dir = appData.offlineDataDir;
+    alignTransformLastFile = appData.dataDir + "CameraTracking/anchorFile.txt";
+    m_alignTrajectoryCache.clear();
+    if(!appData.isLoadMap) {
+        clearDirectory(offline_data_dir);
+    }
+    else {
+        std::ifstream in(alignTransformLastFile);
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                in >> alignTransformLast.at<float>(i, j);
+            }
+        }
+        in.close();
+    }
     return STATE_OK;
 }
 
@@ -197,59 +232,39 @@ int CameraTracking::Update(AppData &appData, SceneData &sceneData, FrameDataPtr 
         std::cout << "waiting done" << std::endl;
     }
 
-    time = frameDataPtr->timestamp;
-    timeBuffer = time;
+    double timestamp = frameDataPtr->timestamp;
+    cv::Mat img=frameDataPtr->image.front();
+    auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
+    // 相机(Head/Eye) 在 OpenXR 世界坐标系下的位姿
+    // frame_data.cameraMat是视图矩阵，inv(frame_data.cameraMat)才是相机位姿矩阵
+    glm::mat4 cameraPose_World_glm = glm::inverse(frame_data.cameraMat);
+    selfSlamPose = GLMPose2CVPoseMat(cameraPose_World_glm);
+    if(!appData.isLoadMap) {
+        saveFrameDataWithPose(offline_data_dir,timestamp, img, selfSlamPose);
+        m_lastAlignMatrix = glm::mat4(1.0);
+        frameDataPtr->alignTransTracking2Map = m_lastAlignMatrix;
+    }
+    else {
+        cv::Mat worldAlignMatrix = alignTransformLast.inv() * alignTransform;
+        m_worldAlignMatrix = CVPose2GLMPoseMat(worldAlignMatrix);
 
-    if (false) {
-        //CameraPose cp;
-        auto cp = sceneData.getMainCamera();
-        cp->timestamp = timeBuffer;
 
-
-        T_wc = cv::Mat(sceneData.getMainCamera()->ARSelfPose);
-        T_wc.convertTo(T_wc, CV_32F); // 确保 T_wc 是 CV_32F 类型
-        T_wc = pose_swicher_ptr->getPose(use_online_pose, T_wc, time);
-
-
-        cv::Mat T_wc_aligned; //T_wc 具有坐标变换意义的位姿
-        if (!appData.isLoadMap) // 建图模式下，直接使用T_wc
-        {
-            T_wc_aligned = T_wc;
+        std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
+        static bool isFirstUpdate = true;
+        if (isFirstUpdate) {
+            m_lastAlignMatrix = m_worldAlignMatrix;
+            isFirstUpdate = false;
         }
-        else // 运行模式下，需要进行对齐
-        {
-            while(true){            
-                if (frameID2RelocPose.find(frameDataPtr->frameID) == frameID2RelocPose.end()){ 
-                    usleep(1000*33); // wait for one frame
-                }
-                else{
-                    // 一直等到到有值，所以不会为空
-                    if (!appData.bUseRelocPose)
-                        T_wc_aligned = alignTransformLast.inv() * alignTransform * T_wc;
-                    else{
-                        T_wc_aligned = alignTransformLast.inv() * frameID2RelocPose[frameDataPtr->frameID];
-                    }
-                    break;
-                }
-            }
+
+        if (m_alignTrajectoryCache.empty()) {
+            m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix,
+                                                              30);
+            m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
         }
-        
-        auto T_cw = inv_T(T_wc_aligned);
-        cp->transform.setPose(T_cw);
-        glm::mat4 glm_alignTransform = CV_Matx44f_to_GLM_Mat4(alignTransform);
-        frameDataPtr->viewRelocMatrix = glm_alignTransform;
-        frameDataPtr->jointRelocMatrix = glm_alignTransform;
-        frameDataPtr->modelRelocMatrix =  glm::mat4(1.0);
 
-    }  //hasImage
-
-    if (capture_offline_data) {
-        auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
-        cv::Matx44f vmat = frame_data.cameraMat; //计算marker位姿需要的相机pose,这个也需要发送
-        imgColor = frameDataPtr->image.front();
-        double indexFrame = frameDataPtr->timestamp;
-//        save_pose_as_tum(debug_output_path + "/poses.txt", indexFrame, cv::Mat(vmat));
-        saveFrameDataWithPose(debug_output_path, indexFrame, imgColor, cv::Mat(vmat));
+        glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
+        m_alignTrajectoryCache.pop_back();
+        frameDataPtr->alignTransTracking2Map = currentSmoothedAlign;
     }
     return STATE_OK;
 }
@@ -271,12 +286,11 @@ int CameraTracking::CollectRemoteProcs(SerilizedFrame& serilizedFrame, std::vect
 {
 
     serilizedFrame.addRGBImage(*frameDataPtr);  //添加RGB图像到serilizedFrame。serilizedFrame随后将被上传到服务器。
-    serilizedFrame.addDepthImage(*frameDataPtr);  
 
     // add slam_pose
     SerilizedObjs send = {
         {"cmd", std::string("reloc")},
-        {"slam_pose", Bytes(T_wc)}, //继续添加其它数据
+        {"slam_pose", Bytes(selfSlamPose)}, //继续添加其它数据
         {"tframe", Bytes(frameDataPtr->timestamp)}
     };
 
@@ -297,8 +311,8 @@ int CameraTracking::ProRemoteReturn(RemoteProcPtr proc){
     auto& ret = proc->ret;
     auto cmd = send.getd<std::string>("cmd");
     
-    if (cmd == "reloc")
-    {//处理reloc命令返回值
+    if (cmd == "reloc"){
+
         if(ret.getd<bool>("align_OK")){
             alignTransform = ret.getd<cv::Mat>("alignTransform");
 
@@ -306,36 +320,12 @@ int CameraTracking::ProRemoteReturn(RemoteProcPtr proc){
         else{
             alignTransform = cv::Mat::eye(4, 4, CV_32F);;
         }
-        // std::cout << "alignTransform: " << alignTransform << std::endl;
-        frameID2RelocPose[ret.getd<int>("curFrameID")] = ret.getd<cv::Mat>("RelocPose");
 
     }
     return STATE_OK;
 }
 
 int CameraTracking::ShutDown(AppData& appData,  SceneData& sceneData){
-    if(!has_shutdown){
-        has_shutdown = true;
-    }
-    else{
-        return STATE_OK;
-    }
-    // save current alignTransform as  lastalignTransform if not saved yet
-    std::cout << "into CameraTracking ShutDown" << std::endl;
-    if(access(alignTransformLastFile.c_str(), 0) == -1){
-        std::cout << "save alignTransform in " << alignTransformLastFile << std::endl;
-        std::ofstream out(alignTransformLastFile, std::ios::out);
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                std::cout << alignTransform.at<float>(i, j) << " ";
-                out << alignTransform.at<float>(i, j) << " ";
-            }
-            out << std::endl;
-        }
-    }
-
     // remote shutdown
     SerilizedObjs cmdsend = {
         {"cmd", std::string("shutdown")}

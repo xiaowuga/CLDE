@@ -47,23 +47,19 @@ int ARInputs::Init(AppData& appData, SceneData& sceneData, FrameDataPtr frameDat
     return STATE_OK;
 };
 
-int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr)
-{
+int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
     ARInputSources::FrameData frameData;
     ARInputSources::instance()->get(frameData);
 
-    while(frameData.timestamp==this->_lastTimestamp)
-    {
+    while(frameData.timestamp==this->_lastTimestamp) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         ARInputSources::instance()->get(frameData);
 
     }
     _lastTimestamp=frameData.timestamp;
-    auto cp = sceneData.getMainCamera();
 
-    if(!frameData.img.empty())
-    {
+    if(!frameData.img.empty()) {
         cv::Mat img=frameData.img, dst;
 
         if(_udistMap1.empty())
@@ -84,8 +80,6 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
         frameDataPtr->image.push_back(img);
         frameDataPtr->colorCameraMatrix=_camK;
         frameDataPtr->timestamp = GetUnixTimestampWithMicros();
-
-
     }
 
     sceneData.setData("ARInputs", frameData);

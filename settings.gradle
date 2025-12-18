@@ -13,7 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AppVer2"
+rootProject.name = "CLDE"
 include ':app'
 
 

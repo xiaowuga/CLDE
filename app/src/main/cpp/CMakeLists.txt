@@ -178,7 +178,7 @@ add_library(openxr_demo MODULE
         ${CMAKE_CURRENT_SOURCE_DIR}/app/recorder.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scenegui.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_AppVer2.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_BuildMap.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_CLDE.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/templatePass.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/pbrPass.cpp
@@ -222,7 +222,7 @@ target_link_libraries(openxr_demo
         cadDataManager
         PoseEstimationRokid
         InteractiveUnderstanding
-#        CameraTracking
+        CameraTracking
         InteractionLogUpload
         HDRSwitch
         #**************************************************endof add Engine

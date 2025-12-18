@@ -11,7 +11,7 @@
 
 #include "ARInput.h"
 #include "Location.h"
-//#include "CameraTracking.h"
+#include "CameraTracking.h"
 #include "PoseEstimationRokid.h"
 
 
@@ -24,8 +24,8 @@
 
 #include "RenderingGlass/RenderClient.h"
 
-
 namespace {
+
 
     std::shared_ptr<ARApp> construct_engine(){
         std::string appName="CameraTracking"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
@@ -33,6 +33,7 @@ namespace {
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
         modules.push_back(createModule<Location>("Location"));
+        modules.push_back(createModule<CameraTracking>("CameraTracking"));
 //        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
         modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
@@ -57,18 +58,16 @@ namespace {
         // Map setting
         appData->isLoadMap = false;
         appData->isSaveMap = false;
-        appData->isOnlyUseMarkerLocation = true;
-
-        appData->record = true;
+        appData->isOnlyUseMarkerLocation = false;
 
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
-                                                "di7", "di8",
+                                               "di7", "di8",
 //                                                "Marker",
-                                                "ranyoukongzhi", "shang1(you)", "shang1",
-                                                "TUILIGAN",
-                                                "YIBIAOPAN",
-                                                "zhong1", "zhong2",
-                                                "zhongyou", "zhongzuo", "zhongzuo1"};
+                                               "ranyoukongzhi", "shang1(you)", "shang1",
+                                               "TUILIGAN",
+                                               "YIBIAOPAN",
+                                               "zhong1", "zhong2",
+                                               "zhongyou", "zhongzuo", "zhongzuo1"};
 
         for(int i = 0; i < model_list.size(); i++) {
             std::string model_name = model_list[i];
@@ -99,19 +98,19 @@ namespace {
     }
 
 
-    class SceneAppVer2 : public IScene{
+    class SceneCLDE : public IScene{
 
     public:
         virtual bool initialize(const XrInstance instance,const XrSession session){
 
             _eng=construct_engine();
-
             std::string dataDir = _eng->appData->dataDir;
             Rendering = createModule<RenderClient>("RenderClient");
 
             auto frameData = _eng->frameData;
             Rendering->Init(*_eng->appData.get(), *_eng->sceneData.get(), frameData);
-
+            if(_eng->appData->isLoadMap)
+                _eng->connectServer("192.168.1.100", 1123);
             _eng->start();
 
 
@@ -135,8 +134,9 @@ namespace {
                 auto& frameDataPtr = _eng->frameData;
                 if(frameDataPtr) {
                     glm::mat4 alignTransMap2Cockpit = frameDataPtr->alignTransMap2Cockpit;
+                    glm::mat4 alignTransTracking2Map = frameDataPtr->alignTransTracking2Map;
                     Rendering->project = project;
-                    Rendering->view =  view * glm::inverse(alignTransMap2Cockpit); //位姿对齐矩阵的逆是视图对齐矩阵
+                    Rendering->view =  view * glm::inverse(alignTransTracking2Map) * glm::inverse(alignTransMap2Cockpit); //位姿对齐矩阵的逆是视图对齐矩阵
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
                 }
 
@@ -159,6 +159,6 @@ namespace {
 }
 
 
-std::shared_ptr<IScene> _createScene_AppVer2(){
-    return std::make_shared<SceneAppVer2>();
+std::shared_ptr<IScene> _createScene_CLDE(){
+    return std::make_shared<SceneCLDE>();
 }

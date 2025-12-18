@@ -158,12 +158,10 @@ bool Application::initialize(const XrInstance instance, const XrSession session)
     const XrGraphicsBindingOpenGLESAndroidKHR *binding = reinterpret_cast<const XrGraphicsBindingOpenGLESAndroidKHR*>(mGraphicsPlugin->GetGraphicsBinding());
     mPlayer->initialize(binding->display);
 
-    m_scene_list={ "AppVer2", "BuildMap"};
+    m_scene_list={ "AppVer2", "CLDE"};
     m_current_scene=0;
 
     this->setCurrentScene(m_scene_list[m_current_scene]);
-//    this->setCurrentScene("marker_test_rpc");
-//    this->setCurrentScene("3dtracking_test");
 
 
     SceneGui::TextItem   text;
@@ -211,34 +209,6 @@ void Application::inputEvent(int leftright,const ApplicationEvent& event) {
     if(m_scene) m_scene->inputEvent(leftright,event);
 }
 void Application::keypadEvent(const std::string &key_name){
-    if(m_scene&&CurrentMSecsSinceEpoch()-m_scene_created_timestamp>900) m_scene->keypadEvent(key_name); //场景创建后900ms后才接受按键事件，否则会导致场景刚创建完成就接收到多个按键事件导致bug
-//    infof(("Pressed: "+key_name).c_str());
-    static std::map<std::string_view,long long> LastPressedMap; //某个按键最后一次被触发是什么时候,防止反复触发
-    static long long MinGap=500; //最小触发间隔为500ms
-    if(CurrentMSecsSinceEpoch()-LastPressedMap[key_name]<MinGap) return;
-    LastPressedMap[key_name]=CurrentMSecsSinceEpoch();
-    if(key_name=="o"){ //Next Step
-        if(CurrentMSecsSinceEpoch()-m_scene_created_timestamp>1000){ //切换Scene有时间限制，1s内最多切换一次
-            if(m_scene_list[m_current_scene]!="task3_step1"){
-                ++m_current_scene;
-                this->setCurrentScene(m_scene_list[m_current_scene]);
-            }
-        }
-    }
-    else if(key_name=="left"){ //Prev Step
-        if(CurrentMSecsSinceEpoch()-m_scene_created_timestamp>1000){ //切换Scene有时间限制，1s内最多切换一次
-            if(m_scene_list[m_current_scene]!="task3_step1"){
-                //
-            }
-        }
-    }
-    else if(key_name=="x"){ //Exit
-        if(CurrentMSecsSinceEpoch()-m_exit_key_last_pressed_timestamp>1000){ //退出按键第一次按下
-            m_exit_key_last_pressed_timestamp=CurrentMSecsSinceEpoch();
-//            mSceneGui->add_text()
-        }
-        else mExitState=true;
-    }
 }
 
 void Application::layout() {

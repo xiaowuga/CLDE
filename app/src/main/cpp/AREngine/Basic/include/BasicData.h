@@ -652,33 +652,16 @@ public:
     std::string animationActionConfigFile;
     std::string animationStateConfigFile;
 
-    bool collectMap = false;  // Reloc module, first run-> set true 
-    // offline data structure
-    /*
-    |-offlineDataDir
-        |-cam0  // RGB   images
-            |-data.csv
-            |-cam_timestamp.txt
-            |-data
-                |-[timestamp].png
-                |-...
-        |-cam1  // Depth images
-            |-same as cam0
-            |-...
-        |-imu0  // imu   data
-            |-data.csv
-    */
 
     bool isLoadMap;
     bool isSaveMap;
+    bool isOnlyUseMarkerLocation;
     // // first run
     // bool isLoadMap = false;
     // bool isSaveMap = true;
     // second run
     // bool isLoadMap = true;
     // bool isSaveMap = false;
-
-    bool bUseRelocPose = false; // true：使用重定位传回的位姿。false：使用：与重定位位姿的对齐变换 * SLAM位姿
 
     //todo add your variable here
     //各算法单位需根据自己的需求在此新增变量或参数，如新增变量较复杂，可新建一个头文件

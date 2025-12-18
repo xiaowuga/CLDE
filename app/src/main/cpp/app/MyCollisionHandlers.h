@@ -12,7 +12,7 @@
 #include "Animator.h"
 #include "AnimationPlayer.h"
 
-std::string getCurrentTimestamp() {
+inline std::string getCurrentTimestamp() {
     // 获取当前时间点
     auto now = std::chrono::system_clock::now();
     // 转换为time_t
