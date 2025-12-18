@@ -124,7 +124,7 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
             }
         }
         //高亮模型
-        highlightInstance(modelName, instanceId);
+//        highlightInstance(modelName, instanceId);
     }
 
 //    {//测试接口用代码，推力杆会动
@@ -190,9 +190,19 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 //    testNum = getFps();
     if(appData.environmentalState != environmentalState){
         environmentalState = appData.environmentalState;
+//        auto& passManager = RenderPassManager::getInstance();
+//        auto pbrPass = passManager.getPassAs<PbrPass>("pbr");
+//        pbrPass->setLightChange(true);
+
         auto& passManager = RenderPassManager::getInstance();
-        auto pbrPass = passManager.getPassAs<PbrPass>("pbr");
-        pbrPass->setLightChange(true);
+        auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
+        equiPass->setEnvCubeMap(environmentalState);
+
+        auto irradiancePass = passManager.getPassAs<IrradiancePass>("irradiance");
+        irradiancePass->setIrradianceMap(environmentalState);
+
+        auto prefilterPass = passManager.getPassAs<PrefilterPass>("prefilter");
+        prefilterPass->setPrefilterMap(environmentalState);
     }
 
     return STATE_OK;
