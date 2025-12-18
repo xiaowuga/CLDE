@@ -64,9 +64,8 @@ int PoseEstimationRokid::Init(AppData &appData,SceneData &sceneData,FrameDataPtr
 int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
 
     std::vector<HandPose>& hand_pose = RokidHandPose::instance()->get_hand_pose();
-    glm::mat4 relocMatrix = frameDataPtr->jointRelocMatrix;
+    glm::mat4 relocMatrix = frameDataPtr->transformGC;
 
-    // modify: 20251005-kylee
     std::vector<HandPose> handPoses;
     for(int i = 0; i < hand_pose.size(); i++) {
         auto joints = hand_pose[i].joints;

@@ -17,7 +17,7 @@ public:
     struct FrameData{
         cv::Mat   img;
         uint64_t  timestamp;
-        cv::Matx44f cameraMat;
+        glm::mat4 cameraMat;
     };
 
     void set(const FrameData &frameData, int  mask);

@@ -1,10 +1,8 @@
 //
-// Created by xiaow on 2025/8/28.
+// Created by xiaow on 2025/12/17.
 //
 
-//#include"arengine.h"
 #include"scene.h"
-//#include "arucopp.h"
 #include "utilsmym.hpp"
 #include "markerdetector.hpp"
 #include "demos/model.h"
@@ -12,8 +10,6 @@
 #include <common/xr_linear.h>
 
 #include "ARInput.h"
-//#include "RelacationGlass.h"
-//#include "PoseEstimationFetch.h"
 #include "Location.h"
 #include "CameraTracking.h"
 #include "PoseEstimationRokid.h"
@@ -23,68 +19,57 @@
 #include "CollisionDetection.h"
 #include "AnimationPlayer.h"
 #include "MyCollisionHandlers.h"
+#include "InteractionLogUpload.h"
+#include "HDRSwitch.h"
 
 #include "RenderingGlass/RenderClient.h"
+
+#include "CameraTracking.h"
 
 
 namespace {
 
-    std::string prase_path(const std::string& str) {
-        std::regex pattern(R"((.*)<\d+>)");
-
-        // 提取并匹配
-        std::smatch match;
-        if (std::regex_match(str, match, pattern)) {
-            return match[1];
-        } else {
-            return str;
-        }
-    }
-
     std::shared_ptr<ARApp> construct_engine(){
-        std::string appName="Relocation"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
+        std::string appName="CameraTracking"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
-        modules.push_back(createModule<Location>("Location"));
-//        modules.push_back(createModule<CameraTracking>("CameraTracking"));  //用createModule创建模块，必须指定一个模块名，并且和server上的模块名对应！！
+        modules.push_back(createModule<CameraTracking>("CameraTracking"));
+//        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
-//        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
-//        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
-//        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
-//        auto ptr = std::static_pointer_cast<AnimationPlayer>(modules.back());
+        modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
+        modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
+        modules.push_back(createModule<AnimationPlayer>("AnimationPlayer"));
+//        modules.push_back(createModule<InteractionLogUpload>("InteractionLogUpload"));
+
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();
 
+
         appData->argc=1;
         appData->argv=nullptr;
+
         appData->engineDir="./AREngine/";  // for test
         appData->dataDir="/storage/emulated/0/AppVer2Data/";        // for test
         appData->interactionConfigFile = "InteractionConfig.json";
-        appData->offlineDataDir = "";
+        appData->offlineDataDir = appData->dataDir + "CameraTracking/GlassOfflineData";
         appData->animationActionConfigFile = appData->dataDir + "CockpitAnimationAction.json";
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = false;
+        appData->isLoadMap = true;
         appData->isSaveMap = false;
 
         appData->record = true;
 
-        // we need to store this pointer in appData, we will use it when we want to set a new animator
-//        appData->setData("AnimationPlayer", ptr);
-
-
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
-                                                "di7", "di8", "Marker",
-//                                                "monitaijia",
-                                                "ranyoukongzhi", "shang1(you)", "shang1",
-                                                "TUILIGAN",
-                                                "YIBIAOPAN",
-//                                               "Marker_YBP_TOP",
-//                                                "YIBIAOPAN_TOP",
-                                                "zhong1", "zhong2",
-                                                "zhongyou", "zhongzuo", "zhongzuo1"};
+                                               "di7", "di8",
+//                                                "Marker",
+                                               "ranyoukongzhi", "shang1(you)", "shang1",
+                                               "TUILIGAN",
+                                               "YIBIAOPAN",
+                                               "zhong1", "zhong2",
+                                               "zhongyou", "zhongzuo", "zhongzuo1"};
 
         for(int i = 0; i < model_list.size(); i++) {
             std::string model_name = model_list[i];
@@ -99,12 +84,10 @@ namespace {
             sceneData->setObject(model_name, ptr);
         }
 
-        std::vector<float> matrixModify = { 0.997789, -0.065480, 0.011375, 0.000000,
-        0.065318, 0.997766, 0.014002, 0.000000,
-        -0.012266, -0.013228, 0.999837, 0.000000,
-        754.634, -54.257, 498.184, 1.000000};
-//        cadDataManager::DataInterface::setActiveDocumentData("Marker_YBP_TOP");
-//        cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
+        std::vector<float> matrixModify = { -0.049222, 0.998740, 0.009768, 0.000000,
+                                            0.956004, 0.044280, 0.289991, 0.000000,
+                                            0.289193, 0.023612, -0.956979, 0.000000,
+                                            0.0, 0.0, 1510.213, 1.000000};
 
         cadDataManager::DataInterface::setActiveDocumentData("YIBIAOPAN");
         cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
@@ -117,7 +100,7 @@ namespace {
     }
 
 
-    class SceneAppVer2 : public IScene{
+    class SceneCLDE : public IScene{
 
     public:
         virtual bool initialize(const XrInstance instance,const XrSession session){
@@ -130,7 +113,7 @@ namespace {
             auto frameData = _eng->frameData;
             Rendering->Init(*_eng->appData.get(), *_eng->sceneData.get(), frameData);
 
-//            _eng->connectServer("192.168.31.24",1299);
+            _eng->connectServer("192.168.1.100", 1123);
             _eng->start();
 
 
@@ -141,11 +124,6 @@ namespace {
 
             if (_eng) {
                 bool isLoadMap = _eng->appData->isLoadMap;
-                std::shared_ptr<Location> locationPtr = std::static_pointer_cast<Location>(_eng->getModule("Location"));
-                if( locationPtr != nullptr) {
-                    glm::mat4 tmp = locationPtr->marker;
-                    infof(GlmMat4_to_String(tmp).c_str());
-                }
                 std::shared_ptr<PoseEstimationRokid> poseEstimationRokidPtr = std::static_pointer_cast<PoseEstimationRokid>(_eng->getModule("PoseEstimationRokid"));
                 if(poseEstimationRokidPtr != nullptr) {
                     std::vector<glm::mat4> &joc = poseEstimationRokidPtr->get_joint_loc();
@@ -160,7 +138,7 @@ namespace {
                 if(frameDataPtr) {
                     Rendering->project = project;
                     if(!isLoadMap) {
-                        Rendering->view =   frameDataPtr->transformGC * view;
+                        Rendering->view = view * frameDataPtr->transformCG;
                     }
                     else {
                         Rendering->view = frameDataPtr->relocMatrix * view * frameDataPtr->transformCG;
@@ -190,6 +168,6 @@ namespace {
 }
 
 
-std::shared_ptr<IScene> _createScene_AppVer2(){
-    return std::make_shared<SceneAppVer2>();
+std::shared_ptr<IScene> _createScene_CLDE(){
+    return std::make_shared<SceneCLDE>();
 }

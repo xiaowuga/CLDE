@@ -11,6 +11,24 @@
 #include "InteractionConfigLoader.h"
 #include "Animator.h"
 #include "AnimationPlayer.h"
+<<<<<<< Updated upstream
+=======
+
+inline std::string getCurrentTimestamp() {
+    // 获取当前时间点
+    auto now = std::chrono::system_clock::now();
+    // 转换为time_t
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    // 转换为本地时间
+    std::tm local_tm;
+    local_tm = *std::localtime(&now_time);
+    // 格式化
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", &local_tm);
+    return std::string(buffer);
+}
+
+>>>>>>> Stashed changes
 #define LOG_TAG "MyCollisionHandlers.h"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 namespace MyCollisionHandlers {

@@ -16,6 +16,8 @@
 #include "stb_image.h"
 #include "ARInput.h"
 #include "PoseEstimationRokid.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "app/utilsmym.hpp"
 #include "app/recorder.hpp"
@@ -403,40 +405,23 @@ struct OpenXrProgram : IOpenXrProgram {
         XrVector3f scale={1.f,1.f,1.f};
         XrMatrix4x4f_CreateTranslationRotationScale(&tmp,&t,&quat,&scale);
         XrMatrix4x4f_InvertRigidBody(&result, &tmp);
-        cv::Matx44f m;
-        //GetGLModelView(R, t, m.val, true);
-        memcpy(m.val,result.m,sizeof(float)*16);
+//        cv::Matx44f m;
+//        //GetGLModelView(R, t, m.val, true);
+//        memcpy(m.val,result.m,sizeof(float)*16);
 
         // 假设数据是 RGB888 格式
         cv::Mat image=cv::Mat((int)height,(int)width, CV_8UC1,(void*)data).clone();
 
 
-        if(false){ // Record Image
-            static bool isfirst=true;
-            static Recorder RR;
-            static std::ofstream file;
-            if(isfirst){
-                std::string s="Download/"+CurrentDateTime("%Y-%m-%d_%H-%M-%S");
-                RR.set_recorder_save_dir(s);
-                file.open(MakeSdcardPath(s+"/position.txt"));
-                RR.start_recording();
-                isfirst=false;
-            }
-            RR.record_image(image);
-            std::ostringstream oss;
-            for (int i = 0; i < 4; ++i)
-                for (int j = 0; j < 4; ++j) oss << m(i, j) << ",";
-            std::string mat_str = oss.str();
-            if (!mat_str.empty()) mat_str.pop_back();
-            file<<mat_str<<std::endl;
-        }
         _RokidOriginalCameraImage=image; //** 调试用，需要删除！！！***
 
         ARInputSources::FrameData frame_data;
-        frame_data.img=image; frame_data.timestamp=timestamp; frame_data.cameraMat=m;
+        frame_data.img=image;
+        frame_data.timestamp=timestamp;
+        frame_data.cameraMat= glm::make_mat4(result.m);
         ARInputSources::instance()->set(frame_data,ARInputSources::DATAF_CAMERAMAT|ARInputSources::DATAF_IMAGE|ARInputSources::DATAF_TIMESTAMP);
         //执行自行添加的回调函数
-        for(const auto &[key,func]:CameraUpdateCallbackList) func(image,m,timestamp);
+//        for(const auto &[key,func]:CameraUpdateCallbackList) func(image,m,timestamp);
     }
 
 
@@ -1259,111 +1244,17 @@ struct OpenXrProgram : IOpenXrProgram {
 
             m_application->inputEvent(hand,applicationEvent);
         }
-        //=====================================检查按键状态，推送给application========================================
-        static std::vector<std::pair<XrAction,std::string_view>> KeypadCheckList{{m_input.selectAction,"select"},
-                                                                                 {m_input.menuAction,  "menu"},
-                                                                                 {m_input.oAction,     "o"},
-                                                                                 {m_input.xAction,     "x"},
-                                                                                 {m_input.upAction,    "up"},
-                                                                                 {m_input.downAction,  "down"},
-                                                                                 {m_input.leftAction,  "left"},
-                                                                                 {m_input.rightAction, "right"}
-        };
-        for(const auto &i:KeypadCheckList){
-            XrActionStateGetInfo getSelectInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, i.first, XR_NULL_PATH};
-            XrActionStateBoolean selectValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getSelectInfo, &selectValue));
-            if ((selectValue.changedSinceLastSync == XR_TRUE) || (selectValue.currentState == XR_TRUE)){
-                m_application->keypadEvent(std::string(i.second));
-//                infof(("========== Pressed: "+std::string(i.second)).c_str());
+
+        XrActionStateGetInfo getXInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.xAction, XR_NULL_PATH};
+        XrActionStateBoolean xValue{XR_TYPE_ACTION_STATE_BOOLEAN};
+        CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getXInfo, &xValue));
+        if ((xValue.isActive == XR_TRUE) && (xValue.changedSinceLastSync == XR_FALSE) && (xValue.currentState == XR_TRUE)) {
+            if (pfnXrOpenCameraPreview != nullptr) {
+                Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: Byebye................"));
+                m_application->exit();
+                ExitAppByKey = true;
             }
         }
-        //========================================================================================================
-
-        if(false){ //Rokid 自带的按键响应事件
-            // 控制器中间确认键
-            XrActionStateGetInfo getSelectInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.selectAction, XR_NULL_PATH};
-            XrActionStateBoolean selectValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getSelectInfo, &selectValue));
-            if ((selectValue.changedSinceLastSync == XR_TRUE) || (selectValue.currentState == XR_TRUE)) {
-                Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: The gamepad select key is pressed !!!!!!!!!!!!!!!!!!!!!"));
-            }
-            // 控制器侧边MENU键
-            XrActionStateGetInfo getMenuInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.menuAction, XR_NULL_PATH};
-            XrActionStateBoolean menuValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getMenuInfo, &menuValue));
-            if ((menuValue.changedSinceLastSync == XR_TRUE) || (menuValue.currentState == XR_TRUE)) {
-                Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: The gamepad menuValue key is pressed !!!!!!!!!!!!!!!!!!!!!"));
-            }
-            // 控制器O键--重置3Dof射线
-            XrActionStateGetInfo getOInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.oAction, XR_NULL_PATH};
-            XrActionStateBoolean oValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getOInfo, &oValue));
-            if ((oValue.changedSinceLastSync == XR_TRUE) || (oValue.currentState == XR_TRUE)) {
-                if (pfnXrRecenterPhonePose != nullptr) {
-                    Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: pfnXrRecenterPhonePose................"));
-                    CHECK_XRCMD(pfnXrRecenterPhonePose());
-                }
-            }
-            // 控制器X键 -- 退出应用
-            XrActionStateGetInfo getXInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.xAction, XR_NULL_PATH};
-            XrActionStateBoolean xValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getXInfo, &xValue));
-            if ((xValue.isActive == XR_TRUE) && (xValue.changedSinceLastSync == XR_FALSE) && (xValue.currentState == XR_TRUE)) {
-                if (pfnXrOpenCameraPreview != nullptr) {
-                    if(m_application->needExit()){
-                        m_application->exit();
-                        Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: Byebye................"));
-                        ExitAppByKey = true;
-//                CHECK_XRCMD(pfnXrOpenCameraPreview(reinterpret_cast<PFN_xrCameraUpdateCallback*>(OnCameraUpdate)));
-                    }
-                }
-            }
-            // 控制器上键
-            XrActionStateGetInfo getUpInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr, m_input.upAction, XR_NULL_PATH};
-            XrActionStateBoolean upValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            CHECK_XRCMD(xrGetActionStateBoolean(m_session, &getUpInfo, &upValue));
-            if ((upValue.isActive == XR_TRUE) && (upValue.changedSinceLastSync == XR_FALSE) && (upValue.currentState == XR_TRUE)) {
-                if (pfnXrRecenterHeadTracker != nullptr) {
-                    Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: pfnXrRecenterHeadTracker................"));
-                    CHECK_XRCMD(pfnXrRecenterHeadTracker());
-                }
-            }
-        }
-        // 我们自己手动判断需不需要退出
-        if(m_application&&m_application->needExit()){
-            m_application->exit();
-            Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: Byebye................"));
-            ExitAppByKey = true;
-//            CHECK_XRCMD(pfnXrOpenCameraPreview(reinterpret_cast<PFN_xrCameraUpdateCallback*>(OnCameraUpdate)));
-        }
-
-        // 获取camera位姿
-//        uint64_t timeStamp;
-//        if (pfnXrGetCameraPhysicsPose != nullptr) {
-//            float position[3];
-//            float orientation[4];
-//            CHECK_XRCMD(pfnXrGetCameraPhysicsPose(&timeStamp, position, orientation));
-//            Log::Write(Log::Level::Info, Fmt("RK-Openxr-hand-App: OnCameraUpdate Call pfnXrGetCameraPhysicsPose in App, position=(%f, %f, %f) orientation=(%f, %f, %f, %f), timeStamp=%ld", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2], orientation[3], timeStamp));
-//        }
-
-        // 获取camera历史位姿
-//        if (pfnXrGetHistoryCameraPhysicsPose != nullptr) {
-//            float position[3];
-//            float orientation[4];
-//            CHECK_XRCMD(pfnXrGetHistoryCameraPhysicsPose(timeStamp-20000, position, orientation));
-//            Log::Write(Log::Level::Info, Fmt("zhfzhf1234===: OnCameraUpdate Call pfnXrGetHistoryCameraPhysicsPose in App, position=(%f, %f, %f) orientation=(%f, %f, %f, %f)", position[0], position[1], position[2], orientation[0], orientation[1], orientation[2], orientation[3]));
-//        }
-
-        // 获取HMD跟踪状态
-//        if (pfnGetHeadTrackingStatus != nullptr) {
-//            uint32_t state = -1;
-//            CHECK_XRCMD(pfnGetHeadTrackingStatus(&state));
-//            Log::Write(Log::Level::Info, Fmt("zhfzhf123: app pfnGetHeadTrackingStatus state = %d", state));
-//        }
-//        else {
-//            Log::Write(Log::Level::Info, Fmt("zhfzhf123: app pfnGetHeadTrackingStatus is null"));
-//        }
 
         //********************** 获取相机图像 Get Camera Image ***************************
         static bool CameraPreviewOpened=false;
