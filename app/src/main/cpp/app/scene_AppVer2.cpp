@@ -66,7 +66,7 @@ namespace {
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = false;
+        appData->isLoadMap = true;
         appData->isSaveMap = false;
 
         appData->record = true;
@@ -140,12 +140,6 @@ namespace {
             auto frameData=std::make_shared<FrameData>();
 
             if (_eng) {
-                bool isLoadMap = _eng->appData->isLoadMap;
-                std::shared_ptr<Location> locationPtr = std::static_pointer_cast<Location>(_eng->getModule("Location"));
-                if( locationPtr != nullptr) {
-                    glm::mat4 tmp = locationPtr->marker;
-                    infof(GlmMat4_to_String(tmp).c_str());
-                }
                 std::shared_ptr<PoseEstimationRokid> poseEstimationRokidPtr = std::static_pointer_cast<PoseEstimationRokid>(_eng->getModule("PoseEstimationRokid"));
                 if(poseEstimationRokidPtr != nullptr) {
                     std::vector<glm::mat4> &joc = poseEstimationRokidPtr->get_joint_loc();
@@ -159,14 +153,9 @@ namespace {
                 auto& frameDataPtr = _eng->frameData;
                 if(frameDataPtr) {
                     Rendering->project = project;
-                    if(!isLoadMap) {
-                        Rendering->view =   frameDataPtr->transformGC * view;
-                    }
-                    else {
-                        Rendering->view = frameDataPtr->relocMatrix * view * frameDataPtr->transformCG;
-                    }
-                    Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(),
-                                      frameDataPtr);
+                    Rendering->view = view * frameDataPtr->viewRelocMatrix;
+                    Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
+                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }

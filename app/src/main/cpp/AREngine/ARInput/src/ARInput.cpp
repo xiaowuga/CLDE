@@ -42,7 +42,8 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
     ARInputSources::FrameData frameData;
     ARInputSources::instance()->get(frameData);
 
-    while(frameData.timestamp==this->_lastTimestamp) {
+    while(frameData.timestamp==this->_lastTimestamp)
+    {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         ARInputSources::instance()->get(frameData);
@@ -50,9 +51,10 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
     }
     _lastTimestamp=frameData.timestamp;
     auto cp = sceneData.getMainCamera();
-//    cp->ARSelfPose = frameData.cameraMat.t();
+    cp->ARSelfPose = frameData.cameraMat;
 
-    if(!frameData.img.empty()) {
+    if(!frameData.img.empty())
+    {
         cv::Mat img=frameData.img, dst;
 
         if(_udistMap1.empty())

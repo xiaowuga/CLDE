@@ -123,61 +123,6 @@ static glm::mat4 GetTransMatFromRT(const cv::Vec3d &rvec,const cv::Vec3d &tvec,c
 }
 
 
-glm::mat4 CVPose2GLMPoseMat(cv::Mat cvMat) {
-    // 1. 基础转换：OpenCV (Row-Major) -> GLM (Column-Major)
-    // 此时得到的 glmMat 数学意义上等于 cvMat
-    glm::mat4 glmMat = glm::make_mat4(cvMat.ptr<float>());
-    glmMat = glm::transpose(glmMat);
-
-    // 2. 坐标系修正：OpenCV -> OpenGL
-    // OpenCV: +Y Down, +Z Forward
-    // OpenGL: +Y Up,   -Z Forward
-    // 构建修正矩阵：Scale(1, -1, -1) 等同于绕 X 轴旋转 180 度
-    glm::mat4 yz_flip = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f));
-
-    // 3. 应用修正
-    // 假设 cvMat 是 View Matrix (World -> Camera)，修正矩阵应该左乘
-    // 逻辑：先进行 cvMat 变换(到了CV相机系)，再进行翻转(到了GL相机系)
-    return yz_flip * glmMat;
-}
-
-cv::Mat RT2Matrix(const cv::Vec3d &rvec, const cv::Vec3d &tvec) {
-    // 1. 异常值检查
-    if (std::isinf(tvec[0]) || std::isnan(tvec[0]) || std::isinf(rvec[0]) || std::isnan(rvec[0]))
-        return cv::Mat::eye(4, 4, CV_64F); // 建议返回 double 类型以匹配输入
-
-    // 2. 罗德里格斯变换：将旋转向量转换为 3x3 旋转矩阵
-    cv::Matx33d R;
-    cv::Rodrigues(rvec, R);
-
-    // 3. 初始化 4x4 单位矩阵
-    cv::Mat T = cv::Mat::eye(4, 4, CV_64F);
-
-    // 4. 填充旋转部分 (左上角 3x3)
-    // 使用 T(Rect) 获取子矩阵并赋值
-    cv::Mat(R).copyTo(T(cv::Rect(0, 0, 3, 3)));
-
-    // 5. 填充平移部分 (第 4 列，即索引 3)
-    T.at<double>(0, 3) = tvec[0];
-    T.at<double>(1, 3) = tvec[1];
-    T.at<double>(2, 3) = tvec[2];
-
-    return T;
-}
-
-cv::Mat GLMPose2CVPoseMat(const glm::mat4& glmPose) {
-    // 1. 轴向修正
-    glm::mat4 axisFix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f));
-    glm::mat4 cvPoseGLM = glmPose * axisFix;
-
-    // 2. 转为 OpenCV Mat (注意转置问题)
-    cv::Mat cvMat = cv::Mat(4, 4, CV_32F);
-    // 这里利用 memcpy + transpose 技巧
-    // GLM(Col) -> memcpy -> OpenCV(Row) = 自动转置了
-    std::memcpy(cvMat.data, glm::value_ptr(cvPoseGLM), 16 * sizeof(float));
-    return cvMat.t(); // 显式转置以获得正确的 Row-Major 矩阵
-}
-
 std::vector<glm::mat4> interpolatePose(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
     std::vector<glm::mat4> path;
 
@@ -305,19 +250,35 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
 
 int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    cv::Mat sendMat,cameraMat; //要发送给服务器的Mat
+    //====================== Aruco & Chessboard Detect ===============================
     auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
-    glm::mat4 T_wc_glm = frame_data.cameraMat;
+    cv::Matx44f vmat = frame_data.cameraMat; //计算marker位姿需要的相机pose,这个也需要发送
+
+
+    glm::mat4 glm_cameraMat =  CV_Matx44f_to_GLM_Mat4(vmat);
 
     if(!frameDataPtr->image.empty()){
         cv::Mat img=frameDataPtr->image.front(); //相机图像
         const cv::Matx33f &camK = frameDataPtr->colorCameraMatrix;
-
+        cameraMat=Matx44f_to_Mat(vmat);
         cv::Vec3d rvec, tvec;
+        glm::mat4 glm_vmat = CV_Matx44f_to_GLM_Mat4(vmat);
         if (_detector.detect(img, camK, rvec, tvec)) {
-            cv::Mat T_cm_cv = RT2Matrix(rvec, tvec);
-            glm::mat4 T_cm_glm = CVPose2GLMPoseMat(T_cm_cv);
-            markerPose = T_wc_glm * T_cm_glm;
-//            trans = marker * glm::inverse(markerPose);
+            cv::Vec3f rvec_float(rvec[0], rvec[1], rvec[2]);
+            cv::Vec3f tvec_float(tvec[0], tvec[1], tvec[2]);
+
+            markerPose = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
+            trans = marker * glm::inverse( markerPose);
+//            trans_inv = markerPose * marker_inv;
+        }
+
+        if(_detector2.detect(img, camK, rvec, tvec)) {
+            cv::Vec3f rvec_float(rvec[0], rvec[1], rvec[2]);
+            cv::Vec3f tvec_float(tvec[0], tvec[1], tvec[2]);
+            markerPose2 = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
+            diff = glm::inverse(markerPose) * markerPose2;
         }
     }
 
@@ -327,23 +288,21 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
         cache = interpolatePose(lastTrans, trans,30);
         lastTrans = trans;
     }
-//    frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());
-//    frameDataPtr->jointRelocMatrix = cache.back();
-   frameDataPtr->transformCG = cache.back();
-    frameDataPtr->transformGC = glm::inverse(cache.back());
+    frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());
+    frameDataPtr->jointRelocMatrix = cache.back();
 
 
-//    float angleX = glm::radians(0.0f);
-//    float angleY = glm::radians(180.0f);
-//    float angleZ = glm::radians(90.0f);
-//
-//    // 分别绕各轴旋转
-//    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
-//    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
-//    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), angleZ, glm::vec3(0.0f, 0.0f, 1.0f));
-//    glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
+    float angleX = glm::radians(0.0f);
+    float angleY = glm::radians(180.0f);
+    float angleZ = glm::radians(90.0f);
 
-//    frameDataPtr->modelRelocMatrix =   marker  * diff  * rotationMatrix ;
+    // 分别绕各轴旋转
+    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), angleZ, glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
+
+    frameDataPtr->modelRelocMatrix =   marker  * diff  * rotationMatrix ;
     cache.pop_back();
     return STATE_OK;
 }
@@ -359,6 +318,5 @@ int Location::ProRemoteReturn(RemoteProcPtr proc) {
 }
 
 int Location::ShutDown(AppData &appData,SceneData &sceneData){
-
     return STATE_OK;
 }

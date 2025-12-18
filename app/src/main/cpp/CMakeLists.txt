@@ -14,7 +14,7 @@ if(NOT EXISTS "${THIRD_PARTY_DIR}")
     message(STATUS "third_party not found, downloading...")
 
     download_and_extract(
-            "https://github.com/xiaowuga/CLDE/releases/download/v1.1.0/third_party.zip"
+            "https://github.com/xiaowuga/AppVer2/releases/download/v1.0.0/third_party.zip"
             ${CMAKE_SOURCE_DIR}
     )
 
@@ -55,7 +55,7 @@ target_include_directories(GlobalLibs INTERFACE
 add_library(assimp SHARED IMPORTED)
 set_target_properties(assimp PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/lib/${ANDROID_ABI}/libassimp.so)
 
-target_link_libraries(GlobalLibs INTERFACE lib_opencv assimp log)
+target_link_libraries(GlobalLibs INTERFACE lib_opencv assimp)
 
 #**************************************************endof add Engine
 
@@ -179,7 +179,6 @@ add_library(openxr_demo MODULE
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scenegui.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_AppVer2.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_BuildMap.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/app/scene_CLDE.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/templatePass.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/RenderingGlass/pbrPass.cpp
@@ -221,6 +220,7 @@ target_link_libraries(openxr_demo
         GlobalLibs
         Location
         cadDataManager
+        MarkerLocation
         PoseEstimationRokid
         InteractiveUnderstanding
         CameraTracking

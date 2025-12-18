@@ -1,7 +1,6 @@
 //
-// Created by xiaow on 2025/8/28.
+// Created by xiaow on 2025/12/4.
 //
-
 //#include"arengine.h"
 #include"scene.h"
 
@@ -25,7 +24,7 @@ namespace {
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
         modules.push_back(createModule<CameraTracking>("CameraTracking"));
-//        modules.push_back(createModule<MarkerLocation>("MarkerLocation"));
+        modules.push_back(createModule<MarkerLocation>("MarkerLocation"));
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();
 
@@ -35,8 +34,10 @@ namespace {
         appData->dataDir="/storage/emulated/0/AppVer2Data/";
         appData->offlineDataDir = "";
         // Map setting
-        appData->isLoadMap = false;
-        appData->isSaveMap = true;
+        appData->isLoadMap = true;
+        appData->isSaveMap = false;
+
+        appData->record = true;
 
         std::shared_ptr<ARApp> app=std::make_shared<ARApp>();
         app->init(appName,appData,sceneData,modules);
@@ -44,7 +45,7 @@ namespace {
     }
 
 
-    class SceneBuildMap : public IScene{
+    class SceneMarkerLoc : public IScene{
 
     public:
         virtual bool initialize(const XrInstance instance,const XrSession session){
@@ -52,7 +53,7 @@ namespace {
             _eng=construct_engine();
             std::string dataDir = _eng->appData->dataDir;
 
-            _eng->connectServer("192.168.1.100", 1123);
+//            _eng->connectServer("192.168.1.100", 1123);
             _eng->start();
 
 
@@ -62,15 +63,15 @@ namespace {
 //            auto frameData=std::make_shared<FrameData>();
 //
             if (_eng) {
-                auto frameData = _eng->frameData;
-                if (frameData) {
-                    auto ccm = frameData->colorCameraMatrix;
-                    int c = frameData->image[0].channels();
-//                    cv::Mat mat(ccm);
-                    std::stringstream ss;
-                    ss << c;
-                    infof(ss.str().c_str());
-                }
+//                auto frameData = _eng->frameData;
+//                if (frameData) {
+//                    auto ccm = frameData->colorCameraMatrix;
+//                    int c = frameData->image[0].channels();
+////                    cv::Mat mat(ccm);
+//                    std::stringstream ss;
+//                    ss << c;
+//                    infof(ss.str().c_str());
+//                }
             }
 
         }
@@ -90,5 +91,5 @@ namespace {
 
 
 std::shared_ptr<IScene> _createScene_BuildMap(){
-    return std::make_shared<SceneBuildMap>();
+    return std::make_shared<SceneMarkerLoc>();
 }
