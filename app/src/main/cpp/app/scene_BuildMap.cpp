@@ -12,8 +12,7 @@
 #include <common/xr_linear.h>
 
 #include "ARInput.h"
-#include "CameraTracking.h"
-#include "MarkerLocation.h"
+//#include "CameraTracking.h"
 #include "RenderingGlass/RenderClient.h"
 
 namespace {
@@ -24,7 +23,7 @@ namespace {
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
-        modules.push_back(createModule<CameraTracking>("CameraTracking"));
+//        modules.push_back(createModule<CameraTracking>("CameraTracking"));
 //        modules.push_back(createModule<MarkerLocation>("MarkerLocation"));
         auto appData=std::make_shared<AppData>();
         auto sceneData=std::make_shared<SceneData>();

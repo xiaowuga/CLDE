@@ -16,19 +16,16 @@
 
 class Location : public ARModule {
 public:
-    ArucoPP  _detector;
-    ArucoPP  _detector2;
-    glm::mat4 markerPose;
-    glm::mat4 markerPose2;
-    glm::mat4 marker;
-    glm::mat4 marker_inv;
-    glm::mat4 trans;
-    glm::mat4 trans_inv;
-    glm::mat4 diff;
-    std::vector<glm::mat4> cache;
-    std::shared_mutex  _dataMutex;
-    glm::mat4 lastTrans;
-    glm::mat4 marker2;
+    ArucoPP m_arucoDetector;
+    ArucoPP m_arucoDetector2;
+    // T_Virtual_Marker (Target Pose)
+    glm::mat4 m_markerPose_Cockpit;
+    // T_Virtual_World = T_Virtual_Marker * inv(T_World_Marker)
+    glm::mat4 m_worldAlignMatrix;
+
+    std::vector<glm::mat4> m_alignTrajectoryCache;
+    glm::mat4 m_lastAlignMatrix;
+    std::shared_mutex m_dataMutex;
 
 
 public:

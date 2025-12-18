@@ -61,7 +61,6 @@ int ARInputs::Update(AppData &appData, SceneData &sceneData, FrameDataPtr frameD
     }
     _lastTimestamp=frameData.timestamp;
     auto cp = sceneData.getMainCamera();
-    cp->ARSelfPose = frameData.cameraMat;
 
     if(!frameData.img.empty())
     {

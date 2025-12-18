@@ -15,7 +15,7 @@
 //#include "RelacationGlass.h"
 //#include "PoseEstimationFetch.h"
 #include "Location.h"
-#include "CameraTracking.h"
+//#include "CameraTracking.h"
 #include "PoseEstimationRokid.h"
 
 
@@ -31,21 +31,8 @@
 
 namespace {
 
-    std::string prase_path(const std::string& str) {
-        std::regex pattern(R"((.*)<\d+>)");
-
-        // 提取并匹配
-        std::smatch match;
-        if (std::regex_match(str, match, pattern)) {
-            return match[1];
-        } else {
-            return str;
-        }
-    }
-
-
     std::shared_ptr<ARApp> construct_engine(){
-        std::string appName="Relocation"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
+        std::string appName="CameraTracking"; //APP名称，必须和服务器注册的App名称对应（由服务器上appDir中文件夹的名称确定）
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
@@ -67,12 +54,12 @@ namespace {
         appData->engineDir="./AREngine/";  // for test
         appData->dataDir="/storage/emulated/0/AppVer2Data/";        // for test
         appData->interactionConfigFile = "InteractionConfig.json";
-        appData->offlineDataDir = "";
+        appData->offlineDataDir = appData->dataDir + "CameraTracking/GlassOfflineData";
         appData->animationActionConfigFile = appData->dataDir + "CockpitAnimationAction.json";
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = true;
+        appData->isLoadMap = false;
         appData->isSaveMap = false;
 
         appData->record = true;
@@ -100,9 +87,9 @@ namespace {
         }
 
         std::vector<float> matrixModify = { -0.049222, 0.998740, 0.009768, 0.000000,
-        0.956004, 0.044280, 0.289991, 0.000000,
-        0.289193, 0.023612, -0.956979, 0.000000,
-        0.0, 0.0, 1510.213, 1.000000};
+                                            0.956004, 0.044280, 0.289991, 0.000000,
+                                            0.289193, 0.023612, -0.956979, 0.000000,
+                                            0.0, 0.0, 1510.213, 1.000000};
 
         cadDataManager::DataInterface::setActiveDocumentData("YIBIAOPAN");
         cadDataManager::DataInterface::modifyInstanceMatrix("52", matrixModify);
@@ -151,25 +138,14 @@ namespace {
                 }
                 auto& frameDataPtr = _eng->frameData;
                 if(frameDataPtr) {
+                    glm::mat4 alignTransMap2Cockpit = frameDataPtr->alignTransMap2Cockpit;
                     Rendering->project = project;
-                    Rendering->view = view * frameDataPtr->viewRelocMatrix;
+                    Rendering->view =  view * glm::inverse(alignTransMap2Cockpit); //位姿对齐矩阵的逆是视图对齐矩阵
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
-                    infof(GlmMat4_to_String(frameDataPtr->modelRelocMatrix).c_str());
                 }
 
             }
-            auto end_time = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
 
-//            if (duration > 0) {
-//                // 1秒 = 1,000,000 微秒
-//                double instantFPS =  1000000.0 / duration;
-//                double timeMs = duration / 2000.0;
-//                std::string fps = std::to_string(instantFPS / 2);
-//                // 打印日志 (建议加上阈值，比如耗时超过 5ms 才打印，防止刷屏)
-//                if(instantFPS / 2 < 20)
-////                 infof(fps.c_str());
-//            }
         }
 
         virtual void close(){
@@ -181,8 +157,6 @@ namespace {
     public:
         std::shared_ptr<ARApp> _eng;
         std::shared_ptr<RenderClient> Rendering = createModule<RenderClient>("RenderClient");
-
-
 
     };
 

@@ -15,6 +15,7 @@ RokidHandPose* RokidHandPose::instance() {
         ptr->hand_pose.resize(2);
         ptr->hand_pose[0].tag = hand_tag::Left;
         ptr->hand_pose[1].tag = hand_tag::Right;
+        ptr->joint_loc.reserve(HAND_COUNT * 21);
     }
     return ptr;
 }
@@ -45,48 +46,48 @@ void RokidHandPose::set(const XrHandJointLocationEXT *location) {
     }
 }
 
-std::vector<HandPose> &RokidHandPose::get_hand_pose() {
+const std::vector<HandPose> &RokidHandPose::get_hand_pose() const {
     return hand_pose;
 }
 
-std::vector<glm::mat4>& RokidHandPose::get_joint_loc() {
+const std::vector<glm::mat4>& RokidHandPose::get_joint_loc() const {
     return joint_loc;
 }
 
 
 int PoseEstimationRokid::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
-    hand_pose.resize(2);
-    hand_pose[0].tag = hand_tag::Left;
-    hand_pose[1].tag = hand_tag::Right;
     return STATE_OK;
 }
 
 int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
+    auto instance = RokidHandPose::instance();
+    glm::mat4 alignTransMap2Cockpit = frameDataPtr->alignTransMap2Cockpit;
 
-    std::vector<HandPose>& hand_pose = RokidHandPose::instance()->get_hand_pose();
-    glm::mat4 relocMatrix = frameDataPtr->jointRelocMatrix;
+    const auto& srcHandPoses = instance->get_hand_pose();
 
-    // modify: 20251005-kylee
-    std::vector<HandPose> handPoses;
-    for(int i = 0; i < hand_pose.size(); i++) {
-        auto joints = hand_pose[i].joints;
-        HandPose handPose;
-        for (int j = 0; j < joints.size(); j++) {
-            auto p = relocMatrix * glm::vec4(joints[j].val[0], joints[j].val[1], joints[j].val[2], 1.0f);
-            handPose.joints[j] = cv::Vec3f(p.x, p.y, p.z);
-        }
-        handPoses.push_back(handPose);
+    std::lock_guard<std::mutex> guard(frameDataPtr->handPoses_mtx);
+    if (frameDataPtr->handPoses.size() != srcHandPoses.size()) {
+        frameDataPtr->handPoses.resize(srcHandPoses.size());
     }
-    {
-        std::lock_guard<std::mutex> guard(frameDataPtr->handPoses_mtx);
-        frameDataPtr->handPoses = handPoses;
+
+    for(int i = 0; i < srcHandPoses.size(); i++) {
+        frameDataPtr->handPoses[i].tag = srcHandPoses[i].tag;
+        const auto& srcJoints = srcHandPoses[i].joints;
+        auto& dstJoints = frameDataPtr->handPoses[i].joints;
+        for (int j = 0; j < srcJoints.size(); ++j) {
+            auto p = alignTransMap2Cockpit * glm::vec4(srcJoints[j].val[0], srcJoints[j].val[1], srcJoints[j].val[2], 1.0f);
+            dstJoints[j] = cv::Vec3f(p.x, p.y, p.z);
+        }
     }
     // end
 
-    joint_loc = RokidHandPose::instance()->get_joint_loc();
-
+    const auto& srcJointLocs = instance->get_joint_loc();
+    if (this->joint_loc.size() != srcJointLocs.size()) {
+        this->joint_loc.resize(srcJointLocs.size());
+    }
+//#pragma omp parallel for
     for(int i = 0;  i < joint_loc.size(); i++) {
-        joint_loc[i] = relocMatrix * joint_loc[i];
+        this->joint_loc[i] = alignTransMap2Cockpit * srcJointLocs[i];
     }
 
     return STATE_OK;

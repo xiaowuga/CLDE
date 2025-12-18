@@ -7,123 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-inline bool StringStartsWith(const std::string &str,const std::string &starts_with){
-    if((str.rfind(starts_with,0)==0)) return true; //start with
-    return false;
-}
 
 
-inline std::string MakeSdcardPath(const std::string &path) {
-    static const std::string SdcardPrefix("/storage/emulated/0/");
-    std::string res=path;
-    if(!path.empty() && !StringStartsWith(path,SdcardPrefix)) res=SdcardPrefix+res;
-    return res;
-}
-
-inline glm::mat4 CV_Matx44f_to_GLM_Mat4(const cv::Matx44f &mat) {  // 将 cv::Matx44f 转换为 glm::mat4
-    return glm::mat4(
-            mat(0, 0), mat(0, 1), mat(0, 2), mat(0, 3),  // 第一行
-            mat(1, 0), mat(1, 1), mat(1, 2), mat(1, 3),  // 第二行
-            mat(2, 0), mat(2, 1), mat(2, 2), mat(2, 3),  // 第三行
-            mat(3, 0), mat(3, 1), mat(3, 2), mat(3, 3)   // 第四行
-    );
-}
-
-
-inline cv::Mat Matx44f_to_Mat(const cv::Matx44f& matx) {
-    cv::Mat mat(4, 4, CV_32F);
-    for (int row = 0; row < 4; ++row)
-        for (int col = 0; col < 4; ++col) mat.at<float>(row, col) = matx(row, col);
-    return mat;
-}
-
-inline void GetGLModelView(const cv::Matx33f &R, const cv::Vec3f &t, float* mModelView, bool cv2gl){ //2025-06-11修改版
-    //绕X轴旋转180度，从OpenCV坐标系变换为OpenGL坐标系
-    //同时转置，opengl默认的矩阵为列主序
-    if (cv2gl){
-        mModelView[0] = R(0, 0);
-        mModelView[1] = -R(1, 0);
-        mModelView[2] = -R(2, 0);
-        mModelView[3] = 0.0f;
-
-        mModelView[4] = R(0, 1);
-        mModelView[5] = -R(1, 1);
-        mModelView[6] = -R(2, 1);
-        mModelView[7] = 0.0f;
-
-        mModelView[8] = R(0, 2);
-        mModelView[9] = -R(1, 2);
-        mModelView[10] = -R(2, 2);
-        mModelView[11] = 0.0f;
-
-        mModelView[12] = t(0);
-        mModelView[13] = -t(1);
-        mModelView[14] = -t(2);
-        mModelView[15] = 1.0f;
-    }
-    else{
-//        mModelView[0] = R(0, 0);
-//        mModelView[1] = R(1, 0);
-//        mModelView[2] = R(2, 0);
-//        mModelView[3] = 0.0f;
-//
-//        mModelView[4] = R(0, 1);
-//        mModelView[5] = R(1, 1);
-//        mModelView[6] = R(2, 1);
-//        mModelView[7] = 0.0f;
-//
-//        mModelView[8] = R(0, 2);
-//        mModelView[9] = R(1, 2);
-//        mModelView[10] = R(2, 2);
-//        mModelView[11] = 0.0f;
-//
-//        mModelView[12] = t(0);
-//        mModelView[13] = t(1);
-//        mModelView[14] = t(2);
-//        mModelView[15] = 1.0f;
-
-        mModelView[0] = R(0, 0);
-        mModelView[4] = R(1, 0);
-        mModelView[8] = R(2, 0);
-        mModelView[12] = 0.0f;
-
-        mModelView[1] = R(0, 1);
-        mModelView[5] = R(1, 1);
-        mModelView[9] = R(2, 1);
-        mModelView[13] = 0.0f;
-
-        mModelView[2] = R(0, 2);
-        mModelView[6] = R(1, 2);
-        mModelView[10] = R(2, 2);
-        mModelView[14] = 0.0f;
-
-        mModelView[3] = t(0);
-        mModelView[7] = t(1);
-        mModelView[11] = t(2);
-        mModelView[15] = 1.0f;
-    }
-}
-inline cv::Matx44f FromRT(const cv::Vec3f &rvec, const cv::Vec3f &tvec, bool cv2gl){
-    if (isinf(tvec[0]) || isnan(tvec[0]) || isinf(rvec[0]) || isnan(rvec[0]))
-        return cv::Matx44f(1.0f, 0.0f, 0.0f, 0.0f,0.0f, 1.0f, 0.0f, 0.0f,0.0f, 0.0f, 1.0f, 0.0f,0.0f, 0.0f, 0.0f, 1.0f);
-
-    cv::Matx33f R;
-    cv::Rodrigues(rvec, R);
-    cv::Matx44f m;
-    GetGLModelView(R, tvec, m.val, cv2gl);
-    return m;
-}
-
-
-static glm::mat4 GetTransMatFromRT(const cv::Vec3d &rvec,const cv::Vec3d &tvec,const glm::mat4 &vmat){
-    auto tmp1=FromRT(cv::Vec3f(0,0,0),cv::Vec3f(0,0,0),true);
-    auto tmp_false=(tmp1*FromRT(rvec,tvec,false)).t();
-    glm::mat4 trans=glm::inverse(vmat)*CV_Matx44f_to_GLM_Mat4(tmp_false);
-    return trans;
-}
-
-
-std::vector<glm::mat4> interpolatePose(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
+std::vector<glm::mat4> GenerateInterpolatedPath(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
     std::vector<glm::mat4> path;
 
     // 保护措施：如果步数太少，直接返回终点或起点
@@ -175,33 +61,50 @@ std::vector<glm::mat4> interpolatePose(const glm::mat4& startMat, const glm::mat
 }
 
 
+glm::mat4 CVPose2GLMPoseMat(cv::Mat cvMat) {
+    // 1. 确保输入是 float 类型，因为 GLM 默认是 float
+    cv::Mat cvMatFloat;
+    cvMat.convertTo(cvMatFloat, CV_32F);
+
+    // 2. 基础转换：OpenCV数据 -> GLM数据 (此时产生转置)
+    glm::mat4 glmMat = glm::make_mat4(cvMatFloat.ptr<float>());
+    glmMat = glm::transpose(glmMat);
+
+    // 3. 坐标系修正：OpenCV (Y-Down) -> OpenGL (Y-Up)
+    // 修正矩阵：绕X轴旋转180度 (Scale 1, -1, -1)
+    glm::mat4 yz_flip = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f));
+
+    // 4. 应用修正 (左乘)
+    return yz_flip * glmMat;
+}
+
+// rvec/tvec 转 cv::Mat (4x4)
+cv::Mat RT2Matrix(const cv::Vec3d &rvec, const cv::Vec3d &tvec) {
+    if (std::isinf(tvec[0]) || std::isnan(tvec[0]) || std::isinf(rvec[0]) || std::isnan(rvec[0]))
+        return cv::Mat::eye(4, 4, CV_64F);
+
+    cv::Matx33d R;
+    cv::Rodrigues(rvec, R);
+    cv::Mat T = cv::Mat::eye(4, 4, CV_64F);
+    cv::Mat(R).copyTo(T(cv::Rect(0, 0, 3, 3)));
+    T.at<double>(0, 3) = tvec[0];
+    T.at<double>(1, 3) = tvec[1];
+    T.at<double>(2, 3) = tvec[2];
+    return T;
+}
+
+
+
 int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
     std::string dataDir = appData.dataDir;
-    _detector.loadTemplate(dataDir + "templ_2.json");
-    _detector2.loadTemplate(dataDir + "templ_3.json");
+    m_arucoDetector.loadTemplate(dataDir + "templ_2.json");
+    m_arucoDetector2.loadTemplate(dataDir + "templ_3.json");
 
-    marker = glm::make_mat4(new float[16]{
-            1.00000000,
-            0,
-            0,
-            0.00000000,
-
-            0,
-            0.00000000,
-            1.00000000,
-            0.00000000,
-
-            0,
-            -1.00000000,
-            0,
-            0.00000000,
-
-            0.278194919,
-            -0.117810422,
-            0.515670925,
-            1.00000000
-    });
-    marker2 = marker;
+    m_markerPose_Cockpit = glm::make_mat4(new float[16]{
+            1.0,0,0,0,
+            0,0,1.0,0,
+            0,-1.0,0,0,
+            0.278194919,-0.117810422,0.515670925,1.00000000});
 
     // 旋转角度
     float angleX = glm::radians(-90.0f);
@@ -214,80 +117,53 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), angleZ, glm::vec3(0.0f, 0.0f, 1.0f));
 
     glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
+    //rotationMatrix作用得更早，因此应该放在右边
+    m_markerPose_Cockpit = m_markerPose_Cockpit * rotationMatrix;
 
-    marker = marker * rotationMatrix;
-    marker_inv = glm::inverse(marker);
-//    marker = F * marker * F;
-    markerPose = glm::mat4(1.0);
-    markerPose2 = glm::mat4(1.0);
-    diff = glm::mat4(1.0);
-    cache.clear();
-    lastTrans = glm::mat4(1.0);
-    trans = glm::mat4(1.0);
+    m_alignTrajectoryCache.clear();
+    m_lastAlignMatrix = glm::mat4(1.0f);
     return STATE_OK;
 }
 
 int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    cv::Mat sendMat,cameraMat; //要发送给服务器的Mat
-    //====================== Aruco & Chessboard Detect ===============================
     auto frame_data=std::any_cast<ARInputSources::FrameData>(sceneData.getData("ARInputs"));
-    cv::Matx44f vmat = frame_data.cameraMat; //计算marker位姿需要的相机pose,这个也需要发送
-
-
-    glm::mat4 glm_cameraMat =  CV_Matx44f_to_GLM_Mat4(vmat);
+    // 相机(Head/Eye) 在 OpenXR 世界坐标系下的位姿
+    // frame_data.cameraMat是视图矩阵，inv(frame_data.cameraMat)才是相机位姿矩阵
+    glm::mat4 cameraPose_World = glm::inverse(frame_data.cameraMat);
 
     if(!frameDataPtr->image.empty()){
         cv::Mat img=frameDataPtr->image.front(); //相机图像
-        const cv::Matx33f &camK = frameDataPtr->colorCameraMatrix;
-        cameraMat=Matx44f_to_Mat(vmat);
+        const cv::Matx33f &cameraIntrinsics = frameDataPtr->colorCameraMatrix; //相机内参
         cv::Vec3d rvec, tvec;
-        glm::mat4 glm_vmat = CV_Matx44f_to_GLM_Mat4(vmat);
-        if (_detector.detect(img, camK, rvec, tvec)) {
-            cv::Vec3f rvec_float(rvec[0], rvec[1], rvec[2]);
-            cv::Vec3f tvec_float(tvec[0], tvec[1], tvec[2]);
-
-            markerPose = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
-            trans = marker * glm::inverse( markerPose);
-//            trans_inv = markerPose * marker_inv;
+        if (m_arucoDetector.detect(img, cameraIntrinsics, rvec, tvec)) {
+            // 获取 Marker 在相机坐标系下的位姿 (OpenCV 格式)
+            cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
+            // 转换为 GLM 格式 (同时修正坐标轴方向)
+            glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
+            // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
+            glm::mat4 markerPose_World = cameraPose_World * markerPose_Camera_GLM;
+            if(glm::determinant(markerPose_World) != 0.0f) {
+                m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
+            }
         }
 
-        if(_detector2.detect(img, camK, rvec, tvec)) {
-            cv::Vec3f rvec_float(rvec[0], rvec[1], rvec[2]);
-            cv::Vec3f tvec_float(tvec[0], tvec[1], tvec[2]);
-            markerPose2 = GetTransMatFromRT(rvec, tvec,CV_Matx44f_to_GLM_Mat4(vmat));
-            diff = glm::inverse(markerPose) * markerPose2;
-        }
     }
 
-
-    std::shared_lock<std::shared_mutex> _lock(_dataMutex);
-    static bool flag = true;
-    if(flag) {
-        lastTrans = trans;
-        flag = false;
+    std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
+    static bool isFirstUpdate = true;
+    if(isFirstUpdate) {
+        m_lastAlignMatrix = m_worldAlignMatrix;
+        isFirstUpdate = false;
     }
-    if(cache.size()==0) {
-        cache = interpolatePose(lastTrans, trans,30);
-        lastTrans = trans;
+    if(m_alignTrajectoryCache.empty()) {
+        m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix, 30);
+        m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
     }
-    frameDataPtr->viewRelocMatrix = glm::inverse(cache.back());
-    frameDataPtr->jointRelocMatrix = cache.back();
 
+    glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
+    m_alignTrajectoryCache.pop_back();
+    frameDataPtr->alignTransMap2Cockpit = currentSmoothedAlign;
 
-    float angleX = glm::radians(0.0f);
-    float angleY = glm::radians(180.0f);
-    float angleZ = glm::radians(90.0f);
-
-    // 分别绕各轴旋转
-    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), angleZ, glm::vec3(0.0f, 0.0f, 1.0f));
-    glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
-
-    frameDataPtr->modelRelocMatrix =   marker  * diff  * rotationMatrix ;
-    cache.pop_back();
     return STATE_OK;
 }
 

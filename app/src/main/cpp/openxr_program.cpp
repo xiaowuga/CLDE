@@ -19,6 +19,7 @@
 
 #include "app/utilsmym.hpp"
 #include "app/recorder.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 namespace {
 
@@ -403,40 +404,19 @@ struct OpenXrProgram : IOpenXrProgram {
         XrVector3f scale={1.f,1.f,1.f};
         XrMatrix4x4f_CreateTranslationRotationScale(&tmp,&t,&quat,&scale);
         XrMatrix4x4f_InvertRigidBody(&result, &tmp);
-        cv::Matx44f m;
-        //GetGLModelView(R, t, m.val, true);
-        memcpy(m.val,result.m,sizeof(float)*16);
+//        cv::Matx44f m;
+//        //GetGLModelView(R, t, m.val, true);
+//        memcpy(m.val,result.m,sizeof(float)*16);
 
         // 假设数据是 RGB888 格式
         cv::Mat image=cv::Mat((int)height,(int)width, CV_8UC1,(void*)data).clone();
 
 
-        if(false){ // Record Image
-            static bool isfirst=true;
-            static Recorder RR;
-            static std::ofstream file;
-            if(isfirst){
-                std::string s="Download/"+CurrentDateTime("%Y-%m-%d_%H-%M-%S");
-                RR.set_recorder_save_dir(s);
-                file.open(MakeSdcardPath(s+"/position.txt"));
-                RR.start_recording();
-                isfirst=false;
-            }
-            RR.record_image(image);
-            std::ostringstream oss;
-            for (int i = 0; i < 4; ++i)
-                for (int j = 0; j < 4; ++j) oss << m(i, j) << ",";
-            std::string mat_str = oss.str();
-            if (!mat_str.empty()) mat_str.pop_back();
-            file<<mat_str<<std::endl;
-        }
-        _RokidOriginalCameraImage=image; //** 调试用，需要删除！！！***
-
         ARInputSources::FrameData frame_data;
-        frame_data.img=image; frame_data.timestamp=timestamp; frame_data.cameraMat=m;
+        frame_data.img=image; frame_data.timestamp=timestamp; frame_data.cameraMat=glm::make_mat4(result.m);
         ARInputSources::instance()->set(frame_data,ARInputSources::DATAF_CAMERAMAT|ARInputSources::DATAF_IMAGE|ARInputSources::DATAF_TIMESTAMP);
-        //执行自行添加的回调函数
-        for(const auto &[key,func]:CameraUpdateCallbackList) func(image,m,timestamp);
+//        //执行自行添加的回调函数
+//        for(const auto &[key,func]:CameraUpdateCallbackList) func(image,m,timestamp);
     }
 
 

@@ -28,9 +28,9 @@ public:
 
     void set(const XrHandJointLocationEXT* location);
 
-    std::vector<HandPose>& get_hand_pose();
+    const std::vector<HandPose>& get_hand_pose() const;
 
-    std::vector<glm::mat4>& get_joint_loc();
+    const std::vector<glm::mat4>& get_joint_loc() const;
 
 private:
     std::vector<HandPose> hand_pose;
@@ -43,9 +43,9 @@ private:
 
 class PoseEstimationRokid : public ARModule {
 public:
-    std::vector<HandPose> hand_pose;
+//    std::vector<HandPose> hand_pose;
     std::vector<glm::mat4> joint_loc;
-    std::shared_mutex  _dataMutex;
+//    std::shared_mutex  _dataMutex;
 
 public:
 

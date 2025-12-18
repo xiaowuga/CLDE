@@ -434,9 +434,8 @@ public:
     //各算法单位需根据自己的需求在此新增变量或参数，如新增变量较复杂，可新建一个头文件
     std::vector<double> projectVector;
     std::vector<double> viewVector;
-    glm::mat4 viewRelocMatrix;
-    glm::mat4 jointRelocMatrix;
-    glm::mat4 modelRelocMatrix;
+    glm::mat4 alignTransMap2Cockpit;
+    glm::mat4 alignTransTracking2Map;
     cv::Mat imgColor;
     cv::Mat imgDepth;
     double timestamp;  // unit: s

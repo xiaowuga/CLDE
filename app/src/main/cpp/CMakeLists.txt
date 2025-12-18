@@ -14,7 +14,7 @@ if(NOT EXISTS "${THIRD_PARTY_DIR}")
     message(STATUS "third_party not found, downloading...")
 
     download_and_extract(
-            "https://github.com/xiaowuga/AppVer2/releases/download/v1.0.0/third_party.zip"
+            "https://github.com/xiaowuga/CLDE/releases/download/v1.1.0/third_party.zip"
             ${CMAKE_SOURCE_DIR}
     )
 
@@ -220,10 +220,9 @@ target_link_libraries(openxr_demo
         GlobalLibs
         Location
         cadDataManager
-        MarkerLocation
         PoseEstimationRokid
         InteractiveUnderstanding
-        CameraTracking
+#        CameraTracking
         InteractionLogUpload
         HDRSwitch
         #**************************************************endof add Engine
