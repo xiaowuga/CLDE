@@ -317,7 +317,7 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
             cv::Mat T_cm_cv = RT2Matrix(rvec, tvec);
             glm::mat4 T_cm_glm = CVPose2GLMPoseMat(T_cm_cv);
             markerPose = T_wc_glm * T_cm_glm;
-//            trans = marker * glm::inverse(markerPose);
+            trans = marker * glm::inverse(markerPose);
         }
     }
 

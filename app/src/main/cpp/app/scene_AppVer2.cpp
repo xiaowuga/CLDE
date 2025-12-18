@@ -160,7 +160,7 @@ namespace {
                 if(frameDataPtr) {
                     Rendering->project = project;
                     if(!isLoadMap) {
-                        Rendering->view =   frameDataPtr->transformGC * view;
+                        Rendering->view =   view * frameDataPtr->transformGC;
                     }
                     else {
                         Rendering->view = frameDataPtr->relocMatrix * view * frameDataPtr->transformCG;
