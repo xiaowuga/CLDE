@@ -47,6 +47,7 @@ private:
     float fps;
     int width = 1920;
     int height = 1200;
+    int environmentalState = 0;
 
     std::string modelName    = "";
     std::string instanceName = "";

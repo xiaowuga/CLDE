@@ -188,7 +188,8 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 //    auto testNum = getFps();
 //    testNum = getIndiceSum();
 //    testNum = getFps();
-    if(frameCount == 1000){
+    if(appData.environmentalState != environmentalState){
+        environmentalState = appData.environmentalState;
         auto& passManager = RenderPassManager::getInstance();
         auto pbrPass = passManager.getPassAs<PbrPass>("pbr");
         pbrPass->setLightChange(true);
