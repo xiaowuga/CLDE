@@ -415,7 +415,10 @@ class FrameData : public BasicData
 {
 public:
 
-    FrameData() {}
+    FrameData() {
+        alignTransMap2Cockpit = glm::mat4(1.0);
+        alignTransTracking2Map = glm::mat4(1.0);
+    }
 
     ~FrameData() {}
 

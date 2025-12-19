@@ -11,25 +11,40 @@
 class _RPCServerConnectionImpl 
 	: public RPCServerConnection
 {
-	 using RPCServerConnection::RPCServerConnection;
+	using RPCServerConnection::RPCServerConnection;
 	
-	std::vector<ARModuleServerPtr> _modules;
+	struct DRemoteProc
+	{
+		RemoteProcPtr	proc;
+		bool            skipTested = false;
+	};
+
+	struct DModule
+	{
+		std::string name;
+		ARModuleServerPtr mptr;
+
+		std::mutex queMtx;
+		std::list<DRemoteProc> procsQue;
+	};
+
+	std::vector<std::shared_ptr<DModule>> _modules;
 	std::mutex _moduleMutex;
 
-	ARModuleServerPtr _getModule(const std::string &moduleName)
+	DModule* _getModule(const std::string &moduleName, bool createIfNotExist=true)
 	{
 		if (moduleName.empty())
 			return nullptr;
 
 		std::lock_guard<std::mutex> _lock(_moduleMutex);
-		ARModuleServerPtr md;
-		for (auto &ptr : _modules)
-			if (ptr->getModuleName() == moduleName)
+		DModule *md=nullptr;
+		for (auto ptr : _modules)
+			if (ptr->name == moduleName)
 			{
-				md = ptr;
+				md = &*ptr;
 				break;
 			}
-		if (!md)
+		if (!md && createIfNotExist)
 		{
 			ARModuleServerPtr tm = ARServerManager::instance().getModule(moduleName);
 			if (tm)
@@ -40,8 +55,17 @@ class _RPCServerConnectionImpl
 
 				if (ptr->init(*this) != STATE_OK)
 					printf("warning: server module %s init failed\n", moduleName.c_str());
-				md = ptr;
-				_modules.push_back(ptr);
+
+				auto dptr = std::make_shared<DModule>();
+				dptr->name = moduleName;
+				dptr->mptr = ptr;
+				_modules.push_back(dptr);
+
+				md = &*dptr;
+
+				_threads.push_back(std::make_shared<std::thread>(
+					[this, md]()
+					{ this->_proThread(md); }));
 			}
 		}
 		return md;
@@ -51,19 +75,7 @@ class _RPCServerConnectionImpl
 	std::mutex _frameBufferMutex;
 
 	ff::Thread _recvHelper;
-
-	struct DRemoteProc
-	{
-		std::string		moduleName;
-		RemoteProcPtr	proc;
-		bool            skipTested = false;
-	};
-	struct ProcBuffer
-	{
-		std::list<DRemoteProc> que;
-		std::mutex mtx;
-	};
-	ProcBuffer _procsRecved;
+	
 	std::mutex _writeMutex;
 	std::vector<std::shared_ptr<std::thread>> _threads;
 	std::atomic_bool _toExit = false;
@@ -149,8 +161,12 @@ public:
 							{
 								auto moduleName= proc->send.getd<std::string>("#module", "");
 
-								std::lock_guard<std::mutex> _lock(this->_procsRecved.mtx);
-								_procsRecved.que.push_back({ moduleName,proc, false});
+								DModule* mptr = this->_getModule(moduleName);
+								if (mptr)
+								{
+									std::lock_guard<std::mutex> _lock(mptr->queMtx);
+									mptr->procsQue.push_back({ proc, false });
+								}
 							}
 						} });
 				}
@@ -165,8 +181,14 @@ public:
 		{
 			bool _break = false;
 			{
-				std::lock_guard<std::mutex> _lock(this->_procsRecved.mtx);
-				if (_recvHelper.nRemainingMessages()==0 && _procsRecved.que.empty())
+				size_t nprocs = 0;
+				for (auto& m : this->_modules)
+				{
+					std::lock_guard<std::mutex> _lock(m->queMtx);
+					nprocs += m->procsQue.size();
+				}
+				
+				if (_recvHelper.nRemainingMessages()==0 && nprocs==0)
 					_break = true;
 			}
 			if (_break)
@@ -175,28 +197,26 @@ public:
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	}
-	void _proThread()
+	void _proThread(DModule *mptr)
 	{
 		while (!_toExit)
 		{
 			RemoteProcPtr proc(nullptr); 
-			std::string procModuleName;
 
 			{
-				std::lock_guard<std::mutex> _lock(this->_procsRecved.mtx);
+				std::lock_guard<std::mutex> _lock(mptr->queMtx);
 				
-				if (!_procsRecved.que.empty())
+				if (!mptr->procsQue.empty())
 				{
-					auto itr = _procsRecved.que.begin();
+					auto itr = mptr->procsQue.begin();
 					auto iproc = itr->proc;
 
-					if ((iproc->flags & RPCF_SKIP_BUFFERED_FRAMES) && !itr->skipTested && iproc->frameDataPtr && !itr->moduleName.empty())
+					if ((iproc->flags & RPCF_SKIP_BUFFERED_FRAMES) && !itr->skipTested && iproc->frameDataPtr)
 					{
-						std::string curModuleName = itr->moduleName;
 						uint lastFrameID = 0;
-						for (auto ritr = _procsRecved.que.rbegin(); ritr != _procsRecved.que.rend(); ++ritr)
+						for (auto ritr = mptr->procsQue.rbegin(); ritr != mptr->procsQue.rend(); ++ritr)
 						{
-							if (curModuleName == ritr->moduleName && ritr->proc->frameDataPtr)
+							if (ritr->proc->frameDataPtr)
 							{
 								lastFrameID = ritr->proc->frameDataPtr->frameID;
 								break;
@@ -205,17 +225,17 @@ public:
 						//if proc is not for the last frame, removing the procs of the same module for the buffered frames
 						if (iproc->frameDataPtr->frameID < lastFrameID)
 						{
-							for (; itr != _procsRecved.que.end();)
+							for (; itr != mptr->procsQue.end();)
 							{
-								if (curModuleName == itr->moduleName && itr->proc->frameDataPtr)
+								if (itr->proc->frameDataPtr)
 								{
 									auto fid = itr->proc->frameDataPtr->frameID;
 									if (fid < lastFrameID)
 									{
-										printf("skip proc: module=%s, frame=%d, id=%d\n", curModuleName.c_str(), itr->proc->frameDataPtr->frameID, itr->proc->id);
+										printf("skip proc: module=%s, frame=%d, id=%d\n", mptr->name.c_str(), itr->proc->frameDataPtr->frameID, itr->proc->id);
 										auto eitr = itr;
 										++itr;
-										_procsRecved.que.erase(eitr);
+										mptr->procsQue.erase(eitr);
 									}
 									else 
 									{
@@ -231,12 +251,11 @@ public:
 					}
 				}
 
-				if(!_procsRecved.que.empty())
+				if(!mptr->procsQue.empty())
 				{
-					auto itr = _procsRecved.que.begin();
+					auto itr = mptr->procsQue.begin();
 					proc = itr->proc;
-					procModuleName = itr->moduleName;
-					_procsRecved.que.pop_front();
+					mptr->procsQue.pop_front();
 				}
 			}
 
@@ -246,13 +265,8 @@ public:
 			{
 				auto &send = proc->send;
 
-				ARModuleServerPtr md = this->_getModule(procModuleName);
-
-				if (!md)
-					printf("warning: proc module is not found (moduleName=%s)\n", procModuleName.c_str());
-				else
 				{
-					md->call(proc, proc->frameDataPtr, *this);
+					mptr->mptr->call(proc, proc->frameDataPtr, *this);
 
 					{
 						std::lock_guard<std::mutex> _lock(_writeMutex);
@@ -268,16 +282,6 @@ public:
 		_threads.push_back(std::make_shared<std::thread>(
 			[this]()
 			{ this->_recvThread(); }));
-
-		if (nworkers <= 0)
-			nworkers = 1;
-
-		for (int i = 0; i < nworkers; ++i)
-		{
-			_threads.push_back(std::make_shared<std::thread>(
-				[this]()
-				{ this->_proThread(); }));
-		}
 	}
 	virtual void close()
 	{
@@ -390,7 +394,7 @@ public:
 						con->app = app;
 
 						// int nworkers = initSend.getd<int>("workers", 2);
-						int nworkers = initSend.getd<int>("workers", 1);
+						int nworkers = initSend.getd<int>("workers", 5);
 						con->start(nworkers);
 						app->rpcConnections.push_back(con);
 						code = STATE_OK;

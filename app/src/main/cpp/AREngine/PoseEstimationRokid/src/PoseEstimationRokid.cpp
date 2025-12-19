@@ -62,6 +62,7 @@ int PoseEstimationRokid::Init(AppData &appData,SceneData &sceneData,FrameDataPtr
 int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataPtr){
     auto instance = RokidHandPose::instance();
     glm::mat4 alignTransMap2Cockpit = frameDataPtr->alignTransMap2Cockpit;
+    glm::mat4 alignTransTracking2Map = frameDataPtr->alignTransTracking2Map;
 
     const auto& srcHandPoses = instance->get_hand_pose();
 
@@ -75,7 +76,7 @@ int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataP
         const auto& srcJoints = srcHandPoses[i].joints;
         auto& dstJoints = frameDataPtr->handPoses[i].joints;
         for (int j = 0; j < srcJoints.size(); ++j) {
-            auto p = alignTransMap2Cockpit * glm::vec4(srcJoints[j].val[0], srcJoints[j].val[1], srcJoints[j].val[2], 1.0f);
+            auto p =  alignTransMap2Cockpit * alignTransTracking2Map * glm::vec4(srcJoints[j].val[0], srcJoints[j].val[1], srcJoints[j].val[2], 1.0f);
             dstJoints[j] = cv::Vec3f(p.x, p.y, p.z);
         }
     }
@@ -87,7 +88,7 @@ int PoseEstimationRokid::Update(AppData &appData,SceneData &sceneData,FrameDataP
     }
 //#pragma omp parallel for
     for(int i = 0;  i < joint_loc.size(); i++) {
-        this->joint_loc[i] = alignTransMap2Cockpit * srcJointLocs[i];
+        this->joint_loc[i] = alignTransMap2Cockpit * alignTransTracking2Map * srcJointLocs[i];
     }
 
     return STATE_OK;

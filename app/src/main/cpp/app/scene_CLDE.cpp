@@ -56,7 +56,7 @@ namespace {
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = false;
+        appData->isLoadMap = true;
         appData->isSaveMap = false;
         appData->isOnlyUseMarkerLocation = false;
 
@@ -110,7 +110,7 @@ namespace {
             auto frameData = _eng->frameData;
             Rendering->Init(*_eng->appData.get(), *_eng->sceneData.get(), frameData);
             if(_eng->appData->isLoadMap)
-                _eng->connectServer("192.168.1.100", 1123);
+                _eng->connectServer("192.168.1.104", 1123);
             _eng->start();
 
 
