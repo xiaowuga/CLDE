@@ -55,7 +55,7 @@ target_include_directories(GlobalLibs INTERFACE
 add_library(assimp SHARED IMPORTED)
 set_target_properties(assimp PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/lib/${ANDROID_ABI}/libassimp.so)
 
-target_link_libraries(GlobalLibs INTERFACE lib_opencv assimp)
+target_link_libraries(GlobalLibs INTERFACE lib_opencv assimp log)
 
 #**************************************************endof add Engine
 

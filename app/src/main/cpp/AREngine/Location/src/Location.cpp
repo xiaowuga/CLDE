@@ -110,7 +110,6 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     float angleX = glm::radians(-90.0f);
     float angleY = glm::radians(180.0f);
     float angleZ = glm::radians(0.0f);
-
     // 分别绕各轴旋转
     glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(1.0f, 0.0f, 0.0f));
     glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -119,11 +118,13 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
     //rotationMatrix作用得更早，因此应该放在右边
     m_markerPose_Cockpit = m_markerPose_Cockpit * rotationMatrix;
-    alignTransMap2CockpitFile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
+//    m_markerPose_Cockpit = glm::mat4(1.0);
+    alignTransMap2CockpitFile = appData.dataDir + "CameraTracking/anchorMap2CockpitFile.txt";
     m_alignTrajectoryCache.clear();
     if(!appData.isLoadMap)
         m_lastAlignMatrix = glm::mat4(1.0f);
     else {
+//        m_lastAlignMatrix = glm::mat4(1.0f);
         std::ifstream in(alignTransMap2CockpitFile);
         float* pMat = glm::value_ptr(m_lastAlignMatrix);
         for (int i = 0; i < 16; ++i) {
@@ -145,7 +146,6 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
         glm::mat4 cameraPose_World = glm::inverse(frame_data.cameraMat);
 
         if (!frameDataPtr->image.empty()) {
-            glm::mat4 alignTransTracking2Map = frameDataPtr->alignTransTracking2Map;
             cv::Mat img = frameDataPtr->image.front(); //相机图像
             const cv::Matx33f &cameraIntrinsics = frameDataPtr->colorCameraMatrix; //相机内参
             cv::Vec3d rvec, tvec;
@@ -154,14 +154,17 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
                 cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
                 // 转换为 GLM 格式 (同时修正坐标轴方向)
                 glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
+                glm::mat4 alignTransTracking2Map = frameDataPtr->alignTransTracking2Map;
                 // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
-                glm::mat4 markerPose_World =  alignTransTracking2Map * cameraPose_World * markerPose_Camera_GLM;
+                glm::mat4 markerPose_World =
+                        alignTransTracking2Map * cameraPose_World * markerPose_Camera_GLM;
                 if (glm::determinant(markerPose_World) != 0.0f) {
                     m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
                 }
             }
-
         }
+//        frameDataPtr->alignTransMap2Cockpit = m_worldAlignMatrix;
+//    }
 
         std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
         static bool isFirstUpdate = true;
@@ -174,7 +177,6 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
                                                               30);
             m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
         }
-
         glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
         m_alignTrajectoryCache.pop_back();
         frameDataPtr->alignTransMap2Cockpit = currentSmoothedAlign;
@@ -199,16 +201,16 @@ int Location::ProRemoteReturn(RemoteProcPtr proc) {
 int Location::ShutDown(AppData &appData,SceneData &sceneData){
 
 //    if(!appData.isLoadMap) {
-        std::string outfile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
-        std::ofstream out(outfile);
-
-        if (out.is_open()) {
-            const float *pSource = glm::value_ptr(m_lastAlignMatrix);
-            for (int i = 0; i < 16; ++i) {
-                out << pSource[i] << " ";
-            }
-            out.close();
-        }
+//        std::string outfile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
+//        std::ofstream out(outfile);
+//
+//        if (out.is_open()) {
+//            const float *pSource = glm::value_ptr(m_lastAlignMatrix);
+//            for (int i = 0; i < 16; ++i) {
+//                out << pSource[i] << " ";
+//            }
+//            out.close();
+//        }
 //    }
     return STATE_OK;
 }

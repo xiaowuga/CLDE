@@ -17,6 +17,10 @@
 
 #include <cstring>  // for memcpy
 
+#include <android/log.h>
+#define LOG_TAG "CameraTracking.cpp"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
 namespace fs = std::filesystem;
 
 CameraTracking::CameraTracking() = default;
@@ -138,57 +142,6 @@ glm::mat4 CVPose2GLMPoseMat(cv::Mat cvMat) {
 }
 
 
-std::vector<glm::mat4> GenerateInterpolatedPath(const glm::mat4& startMat, const glm::mat4& endMat, int steps) {
-    std::vector<glm::mat4> path;
-
-    // 保护措施：如果步数太少，直接返回终点或起点
-    if (steps <= 0) return path;
-    if (steps == 1) {
-        path.push_back(startMat);
-        return path;
-    }
-
-    // 预分配内存，防止频繁 realloc
-    path.reserve(steps);
-
-    // -------------------------------------------------
-    // 1. 提取基础数据 (分解)
-    // -------------------------------------------------
-    // 提取位移 (GLM 第4列对应内存最后4个数，即你的最后一行)
-    glm::vec3 p0 = glm::vec3(startMat[3]);
-    glm::vec3 p1 = glm::vec3(endMat[3]);
-
-    // 提取旋转 (转为四元数)
-    glm::quat q0 = glm::quat_cast(startMat);
-    glm::quat q1 = glm::quat_cast(endMat);
-
-    // -------------------------------------------------
-    // 2. 循环生成插值
-    // -------------------------------------------------
-    for (int i = 0; i < steps; ++i) {
-        // 计算当前进度 t (从 0.0 到 1.0)
-        // i=0 时 t=0 (起点)
-        // i=steps-1 时 t=1 (终点)
-        float t = (float)i / (float)(steps - 1);
-
-        // A. 位置线性插值 (LERP)
-        glm::vec3 pt = glm::mix(p0, p1, t);
-
-        // B. 旋转球面插值 (SLERP)
-        // GLM 的 slerp 会自动处理最短路径
-        glm::quat qt = glm::slerp(q0, q1, t);
-
-        // C. 重组矩阵
-        glm::mat4 mat = glm::mat4_cast(qt); // 旋转部分
-        mat[3] = glm::vec4(pt, 1.0f);       // 位移部分 (填入最后4个float)
-
-        path.push_back(mat);
-    }
-    std::reverse(path.begin(), path.end());
-
-    return path;
-}
-
 int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
 
     SerilizedObjs initCmdSend = {
@@ -201,7 +154,7 @@ int CameraTracking::Init(AppData &appData, SceneData &sceneData, FrameDataPtr fr
 
     alignTransform = cv::Mat::eye(4, 4, CV_32F);
     alignTransformLast = cv::Mat::eye(4, 4, CV_32F);
-
+    selfSlamPose = cv::Mat::eye(4, 4, CV_32F);
     offline_data_dir = appData.offlineDataDir;
     alignTransformLastFile = appData.dataDir + "CameraTracking/anchorFile.txt";
     m_alignTrajectoryCache.clear();
@@ -245,26 +198,12 @@ int CameraTracking::Update(AppData &appData, SceneData &sceneData, FrameDataPtr 
         frameDataPtr->alignTransTracking2Map = m_lastAlignMatrix;
     }
     else {
+
         cv::Mat worldAlignMatrix = alignTransformLast.inv() * alignTransform;
         m_worldAlignMatrix = CVPose2GLMPoseMat(worldAlignMatrix);
 
 
-        std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
-        static bool isFirstUpdate = true;
-        if (isFirstUpdate) {
-            m_lastAlignMatrix = m_worldAlignMatrix;
-            isFirstUpdate = false;
-        }
-
-        if (m_alignTrajectoryCache.empty()) {
-            m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix,
-                                                              30);
-            m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
-        }
-
-        glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
-        m_alignTrajectoryCache.pop_back();
-        frameDataPtr->alignTransTracking2Map = currentSmoothedAlign;
+        frameDataPtr->alignTransTracking2Map = m_worldAlignMatrix;
     }
     return STATE_OK;
 }

@@ -136,7 +136,7 @@ namespace {
                     glm::mat4 alignTransMap2Cockpit = frameDataPtr->alignTransMap2Cockpit;
                     glm::mat4 alignTransTracking2Map = frameDataPtr->alignTransTracking2Map;
                     Rendering->project = project;
-                    Rendering->view =  view * glm::inverse(alignTransTracking2Map) * glm::inverse(alignTransMap2Cockpit); //位姿对齐矩阵的逆是视图对齐矩阵
+                    Rendering->view =  view * glm::inverse(alignTransMap2Cockpit) * glm::inverse(alignTransTracking2Map); //位姿对齐矩阵的逆是视图对齐矩阵
                     Rendering->Update(*_eng->appData.get(), *_eng->sceneData.get(), frameDataPtr);
                 }
 
