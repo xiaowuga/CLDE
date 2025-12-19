@@ -154,10 +154,29 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
                 cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
                 // 转换为 GLM 格式 (同时修正坐标轴方向)
                 glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
-                // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
-                glm::mat4 markerPose_World = cameraPose_World * markerPose_Camera_GLM;
+                
+                // 获取 Tracking -> Map 变换 (来自 CameraTracking 模块的云端重定位结果)
+                glm::mat4 tracking2Map = frameDataPtr->alignTransTracking2Map;
+                
+                // 计算 Marker 在 OpenXR 世界坐标系(或云端地图坐标系)下的实际位姿
+                // 如果 tracking2Map 是单位矩阵，则 markerPose_World 基于 Local Tracking 坐标系
+                // 如果 tracking2Map 有效，则 markerPose_World 基于云端 Map 坐标系
+                glm::mat4 markerPose_World = tracking2Map * cameraPose_World * markerPose_Camera_GLM;
+                
                 if (glm::determinant(markerPose_World) != 0.0f) {
                     m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
+                    
+                    // 将其保存，以后没有marker的时候，也可以让驾驶舱保留在相同位置
+                    if (!alignTransMap2CockpitFile.empty()) {
+                        std::ofstream out(alignTransMap2CockpitFile);
+                        if (out.is_open()) {
+                            const float* pSource = glm::value_ptr(m_worldAlignMatrix);
+                            for (int i = 0; i < 16; ++i) {
+                                out << pSource[i] << " ";
+                            }
+                            out.close();
+                        }
+                    }
                 }
             }
 
@@ -187,61 +206,12 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
 }
 
 int Location::CollectRemoteProcs(SerilizedFrame &serilizedFrame,std::vector<RemoteProcPtr> &procs,FrameDataPtr frameDataPtr){
-    if (this->app && this->app->sceneData && this->app->sceneData->hasData("ARInputs")) {
-        auto frame_data = std::any_cast<ARInputSources::FrameData>(this->app->sceneData->getData("ARInputs"));
-        glm::mat4 cameraPose_Local = glm::inverse(frame_data.cameraMat);
 
-        serilizedFrame.addRGBImage(*frameDataPtr);
-
-        auto proc = std::make_shared<RemoteProc>();
-        proc->modulePtr = this;
-        proc->frameDataPtr = frameDataPtr;
-        proc->flags = RPCFlags(0);
-        proc->setData("LocalCameraPose", cameraPose_Local);
-
-        procs.push_back(proc);
-    }
     return STATE_OK;
 }
 
 int Location::ProRemoteReturn(RemoteProcPtr proc) {
-    if (proc->ret.has("pose") && proc->hasData("LocalCameraPose")) {
-        std::vector<float> poseData = proc->ret.get<std::vector<float>>("pose");
-        if (poseData.size() == 16) {
-            glm::mat4 cameraPose_Cloud = glm::make_mat4(poseData.data());
-            glm::mat4 cameraPose_Local = std::any_cast<glm::mat4>(proc->getData("LocalCameraPose"));
-            glm::mat4 alignMatrix = cameraPose_Cloud * glm::inverse(cameraPose_Local);
 
-            std::unique_lock<std::shared_mutex> _lock(m_dataMutex);
-
-            if (proc->frameDataPtr && !proc->frameDataPtr->image.empty()) {
-                cv::Mat img = proc->frameDataPtr->image.front();
-                cv::Matx33f cameraIntrinsics = proc->frameDataPtr->colorCameraMatrix;
-                cv::Vec3d rvec, tvec;
-                
-                if (m_arucoDetector.detect(img, cameraIntrinsics, rvec, tvec)) {
-                    cv::Mat markerPose_Camera_CV = RT2Matrix(rvec, tvec);
-                    glm::mat4 markerPose_Camera_GLM = CVPose2GLMPoseMat(markerPose_Camera_CV);
-                    glm::mat4 markerPose_Cloud = cameraPose_Cloud * markerPose_Camera_GLM;
-                    // Marker world pose in cloud calculated.
-                }
-            }
-            
-            m_worldAlignMatrix = alignMatrix;
-            m_lastAlignMatrix = m_worldAlignMatrix;
-
-            if (!alignTransMap2CockpitFile.empty()) {
-                std::ofstream out(alignTransMap2CockpitFile);
-                if (out.is_open()) {
-                    const float* pSource = glm::value_ptr(m_worldAlignMatrix);
-                    for (int i = 0; i < 16; ++i) {
-                        out << pSource[i] << " ";
-                    }
-                    out.close();
-                }
-            }
-        }
-    }
     return STATE_OK;
 }
 
