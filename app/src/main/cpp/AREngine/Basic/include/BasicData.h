@@ -416,8 +416,8 @@ class FrameData : public BasicData
 public:
 
     FrameData() {
-        alignTransMap2Cockpit = glm::mat4(1.0);
-        alignTransTracking2Map = glm::mat4(1.0);
+        alignTrans = glm::mat4(1.0);
+        alignTransG2M = glm::mat4(1.0);
     }
 
     ~FrameData() {}
@@ -437,8 +437,8 @@ public:
     //各算法单位需根据自己的需求在此新增变量或参数，如新增变量较复杂，可新建一个头文件
     std::vector<double> projectVector;
     std::vector<double> viewVector;
-    glm::mat4 alignTransMap2Cockpit;
-    glm::mat4 alignTransTracking2Map;
+    glm::mat4 alignTrans;
+    glm::mat4 alignTransG2M; //glass -> map, 由云端服务器返回
     cv::Mat imgColor;
     cv::Mat imgDepth;
     double timestamp;  // unit: s

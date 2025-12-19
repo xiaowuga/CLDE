@@ -194,16 +194,13 @@ int CameraTracking::Update(AppData &appData, SceneData &sceneData, FrameDataPtr 
     selfSlamPose = GLMPose2CVPoseMat(cameraPose_World_glm);
     if(!appData.isLoadMap) {
         saveFrameDataWithPose(offline_data_dir,timestamp, img, selfSlamPose);
-        m_lastAlignMatrix = glm::mat4(1.0);
-        frameDataPtr->alignTransTracking2Map = m_lastAlignMatrix;
+        m_worldAlignMatrix = glm::mat4(1.0);
+        frameDataPtr->alignTransG2M = m_worldAlignMatrix;
     }
     else {
-
         cv::Mat worldAlignMatrix = alignTransformLast.inv() * alignTransform;
         m_worldAlignMatrix = CVPose2GLMPoseMat(worldAlignMatrix);
-
-
-        frameDataPtr->alignTransTracking2Map = m_worldAlignMatrix;
+        frameDataPtr->alignTransG2M = m_worldAlignMatrix;
     }
     return STATE_OK;
 }

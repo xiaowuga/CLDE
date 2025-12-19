@@ -159,7 +159,7 @@ bool Application::initialize(const XrInstance instance, const XrSession session)
     mPlayer->initialize(binding->display);
 
     m_scene_list={ "AppVer2", "CLDE"};
-    m_current_scene=0;
+    m_current_scene=1;
 
     this->setCurrentScene(m_scene_list[m_current_scene]);
 
