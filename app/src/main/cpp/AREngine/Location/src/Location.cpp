@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <Location.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -145,6 +146,7 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
         // frame_data.cameraMat是视图矩阵，inv(frame_data.cameraMat)才是相机位姿矩阵
         glm::mat4 cameraPose_World = glm::inverse(frame_data.cameraMat);
 
+        bool markerDetected = false;
         if (!frameDataPtr->image.empty()) {
             cv::Mat img = frameDataPtr->image.front(); //相机图像
             const cv::Matx33f &cameraIntrinsics = frameDataPtr->colorCameraMatrix; //相机内参
@@ -160,6 +162,17 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
                         alignTransTracking2Map * cameraPose_World * markerPose_Camera_GLM;
                 if (glm::determinant(markerPose_World) != 0.0f) {
                     m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPose_World);
+                    markerDetected = true;
+                    
+                    // 检测到marker时，实时保存对齐矩阵到文件，以便后续无marker时使用
+                    std::ofstream out(alignTransMap2CockpitFile);
+                    if (out.is_open()) {
+                        const float *pSource = glm::value_ptr(m_worldAlignMatrix);
+                        for (int i = 0; i < 16; ++i) {
+                            out << pSource[i] << " ";
+                        }
+                        out.close();
+                    }
                 }
             }
         }
@@ -168,15 +181,31 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
 
         std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
         static bool isFirstUpdate = true;
-        if (isFirstUpdate) {
-            m_lastAlignMatrix = m_worldAlignMatrix;
-            isFirstUpdate = false;
+        
+        // 如果检测到marker，更新对齐矩阵
+        if (markerDetected) {
+            if (isFirstUpdate) {
+                m_lastAlignMatrix = m_worldAlignMatrix;
+                isFirstUpdate = false;
+            }
+            if (m_alignTrajectoryCache.empty()) {
+                m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix,
+                                                                  30);
+                m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
+            }
+        } else {
+            // 如果没有检测到marker，使用上次保存的对齐矩阵
+            // 首次更新时，如果没有检测到marker，使用Init中加载的对齐矩阵
+            if (isFirstUpdate) {
+                m_worldAlignMatrix = m_lastAlignMatrix;
+                isFirstUpdate = false;
+            }
+            // 如果轨迹缓存为空，保持使用当前的对齐矩阵
+            if (m_alignTrajectoryCache.empty()) {
+                m_alignTrajectoryCache.push_back(m_lastAlignMatrix);
+            }
         }
-        if (m_alignTrajectoryCache.empty()) {
-            m_alignTrajectoryCache = GenerateInterpolatedPath(m_lastAlignMatrix, m_worldAlignMatrix,
-                                                              30);
-            m_lastAlignMatrix = m_worldAlignMatrix; // 更新基准
-        }
+        
         glm::mat4 currentSmoothedAlign = m_alignTrajectoryCache.back();
         m_alignTrajectoryCache.pop_back();
         frameDataPtr->alignTransMap2Cockpit = currentSmoothedAlign;
@@ -200,17 +229,17 @@ int Location::ProRemoteReturn(RemoteProcPtr proc) {
 
 int Location::ShutDown(AppData &appData,SceneData &sceneData){
 
-//    if(!appData.isLoadMap) {
-//        std::string outfile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
-//        std::ofstream out(outfile);
-//
-//        if (out.is_open()) {
-//            const float *pSource = glm::value_ptr(m_lastAlignMatrix);
-//            for (int i = 0; i < 16; ++i) {
-//                out << pSource[i] << " ";
-//            }
-//            out.close();
-//        }
-//    }
+    // 程序关闭时保存最后的对齐矩阵，确保下次启动时可以无marker重定位
+    if(!appData.isLoadMap) {
+        std::ofstream out(alignTransMap2CockpitFile);
+
+        if (out.is_open()) {
+            const float *pSource = glm::value_ptr(m_lastAlignMatrix);
+            for (int i = 0; i < 16; ++i) {
+                out << pSource[i] << " ";
+            }
+            out.close();
+        }
+    }
     return STATE_OK;
 }
