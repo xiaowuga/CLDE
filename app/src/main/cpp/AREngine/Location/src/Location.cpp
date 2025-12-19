@@ -149,12 +149,16 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
             // 3. 校验：只有读够了16个浮点数才算成功
             if (count == 16) {
                 isLoaded = true;
+                LOGI("[Location Init] 成功从文件加载 markerPoseInMap");
             }
         }
 
         if (!isLoaded) {
             markerPoseInMap = glm::mat4(1.0f); // GLM 创建单位阵的方法
+            LOGI("[Location Init] 警告：无法加载 markerPoseInMap，使用单位矩阵");
         }
+        std::string str = glm::to_string(markerPoseInMap);
+        LOGI("[Location Init] markerPoseInMap = %s", str.c_str());
     }
     return STATE_OK;
 }
@@ -177,18 +181,27 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
             glm::mat4 alignTransG2M = frameDataPtr->alignTransG2M;
             // 计算 Marker 在 OpenXR 世界坐标系下的实际位姿
             markerPoseInGlass = cameraPoseInGlass * markerPoseInCam;
+            
+            LOGI("[Location Update] 检测到 Marker, isLoadMap=%d", appData.isLoadMap);
+            
             if (!appData.isLoadMap) {
                 // 无地图模式：直接对齐到 Marker
                 // T_World_Glass = T_World_Marker * T_Marker_Glass
                 m_worldAlignMatrix = m_markerPose_Cockpit * glm::inverse(markerPoseInGlass);
+                
+                // 同时更新 markerPoseInMap，用于后续保存和加载
+                // T_Map_Marker = T_Map_Glass * T_Glass_Marker
+                markerPoseInMap = alignTransG2M * markerPoseInGlass;
+                LOGI("[Location Update] 无地图模式：更新 markerPoseInMap");
             } else {
                 // 有地图模式：
-                // 1. 更新 Marker 在地图中的位置 (T_Map_Marker = T_Map_Glass * T_Glass_Marker)
-                //    注意：这一步不仅是计算，本质上是在"校准"地图和Marker的关系
-                markerPoseInMap = alignTransG2M * markerPoseInGlass;
-
-                // 2. 计算最终对齐 (原理同下方的 else 分支)
-                // T_World_Map = T_World_Marker * T_Marker_Map
+                // 使用从文件加载的 markerPoseInMap（不要重新计算！）
+                // markerPoseInMap 代表 Marker 在地图中的固定位置，应该保持不变
+                
+                LOGI("[Location Update] 有地图模式：使用已加载的 markerPoseInMap（不重新计算）");
+                
+                // 计算最终对齐：
+                // T_World_Map = T_World_Marker * T_Marker_Map^(-1)
                 glm::mat4 worldFromMap = m_markerPose_Cockpit * glm::inverse(markerPoseInMap);
 
                 // T_World_Glass = T_World_Map * T_Map_Glass
@@ -215,8 +228,12 @@ int Location::Update(AppData &appData,SceneData &sceneData,FrameDataPtr frameDat
         }
     }
 
-    std::string str = glm::to_string(markerPoseInMap);
-    LOGI("%s\n", str.c_str());
+    // 打印调试信息（降低频率避免刷屏）
+    static int frameCount = 0;
+    if (frameCount++ % 60 == 0) {  // 每60帧打印一次
+        std::string str = glm::to_string(markerPoseInMap);
+        LOGI("[Location Update] markerPoseInMap = %s", str.c_str());
+    }
     std::shared_lock<std::shared_mutex> _lock(m_dataMutex);
     static bool isFirstUpdate = true;
     if (isFirstUpdate) {

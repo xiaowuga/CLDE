@@ -269,5 +269,23 @@ int CameraTracking::ShutDown(AppData& appData,  SceneData& sceneData){
     app->postRemoteCall(this, nullptr, cmdsend);
     std::cout << "client CameraTracking send shutdown to Server" << std::endl;
     
+    // 保存当前的 alignTransform 作为下次启动的 alignTransformLast
+    // 注意：只在有地图模式下保存，因为只有这种模式下才需要加载
+    if (appData.isLoadMap && !alignTransform.empty()) {
+        std::ofstream out(alignTransformLastFile);
+        if (out.is_open()) {
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    out << alignTransform.at<float>(i, j) << " ";
+                }
+                out << "\n";
+            }
+            out.close();
+            std::cout << "[CameraTracking ShutDown] 保存 alignTransform 到文件" << std::endl;
+        } else {
+            std::cout << "[CameraTracking ShutDown] 警告：无法保存 alignTransform 到文件" << std::endl;
+        }
+    }
+    
     return STATE_OK;
 }
