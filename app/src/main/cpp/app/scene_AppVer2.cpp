@@ -11,7 +11,7 @@
 
 #include "ARInput.h"
 #include "Location.h"
-//#include "CameraTracking.h"
+#include "CameraTracking.h"
 #include "PoseEstimationRokid.h"
 
 
@@ -32,6 +32,7 @@ namespace {
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
+        modules.push_back(createModule<CameraTracking>("CameraTracking"));
         modules.push_back(createModule<Location>("Location"));
 //        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
@@ -55,7 +56,7 @@ namespace {
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = false;
+        appData->isLoadMap = true;
         appData->isSaveMap = false;
         appData->isOnlyUseMarkerLocation = true;
 
