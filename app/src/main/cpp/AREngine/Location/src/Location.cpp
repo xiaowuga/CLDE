@@ -119,7 +119,7 @@ int Location::Init(AppData &appData,SceneData &sceneData,FrameDataPtr frameDataP
     glm::mat4 rotationMatrix = rotationX * rotationY * rotationZ;
     //rotationMatrix作用得更早，因此应该放在右边
     m_markerPose_Cockpit = m_markerPose_Cockpit * rotationMatrix;
-    alignTransMap2CockpitFile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
+    alignTransMap2CockpitFile = appData.dataDir + "CameraTracking/anchorMap2Cockpit.txt";
     m_alignTrajectoryCache.clear();
     if(!appData.isLoadMap)
         m_lastAlignMatrix = glm::mat4(1.0f);
@@ -198,7 +198,8 @@ int Location::ProRemoteReturn(RemoteProcPtr proc) {
 int Location::ShutDown(AppData &appData,SceneData &sceneData){
 
     if(!appData.isLoadMap && !appData.isOnlyUseMarkerLocation) {
-        std::ofstream out(alignTransMap2CockpitFile);
+        std::string outfile = appData.dataDir + "CameraTracking/alignTransMap2CockpitFile.txt";
+        std::ofstream out(outfile);
 
         if (out.is_open()) {
             const float *pSource = glm::value_ptr(m_lastAlignMatrix);
