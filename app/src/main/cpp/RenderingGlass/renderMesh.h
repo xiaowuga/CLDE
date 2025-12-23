@@ -42,6 +42,17 @@ public:
          std::vector<renderTexture> textures, pbrMaterial pbrMaterial, int transformNum,
          std::vector<float> transformVector);
 
+    // Destructor to clean up resources
+    ~renderMesh();
+
+    // Disable copying to prevent double-free of OpenGL resources
+    renderMesh(const renderMesh&) = delete;
+    renderMesh& operator=(const renderMesh&) = delete;
+
+    // Enable moving
+    renderMesh(renderMesh&& other) noexcept;
+    renderMesh& operator=(renderMesh&& other) noexcept;
+
     void draw(renderShader& shader);
     void drawPBR(renderShader& shader);
     void drawShadowMap(renderShader& shader) const;
@@ -56,12 +67,12 @@ public:
     std::vector<unsigned int> mIndices;
     std::vector<renderTexture>      mTextures;
     pbrMaterial mPbrMaterial;
-    int mTransformNum;
+    int mTransformNum = 0;
     std::vector<float> mTransformVector;
 
-    unsigned int mFramebuffer;
-    unsigned int mVAO;
-    unsigned int mVBO;
-    unsigned int mEBO;
-    unsigned int mVBO_transform;
+    unsigned int mFramebuffer = 0;
+    unsigned int mVAO = 0;
+    unsigned int mVBO = 0;
+    unsigned int mEBO = 0;
+    unsigned int mVBO_transform = 0;
 };

@@ -63,15 +63,11 @@ public:
             auto meshID = protoId.at(name);  // 如果 key 不存在，抛出 std::out_of_range
             int k = 0;
             for( int i = 0; i < meshID; i++ ){
-                auto mesh = mMeshes->at(name+std::to_string(i));
+                auto& mesh = mMeshes->at(name+std::to_string(i));
 //                mMeshes->at(std::to_string(i)).mTransformVector = std::move(transform[k]);
                 LOGI("%i",mesh.mVertices.size());
                 mesh.mTransformVector = std::move(transform[k]);
                 mesh.setupMesh();
-                mMeshes->erase(name+std::to_string(i));
-                mMeshes->insert(std::pair<std::string, renderMesh>(
-                        name+std::to_string(i),
-                        mesh));
                 k++;
             }
         } catch (const std::out_of_range& e) {

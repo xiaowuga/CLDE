@@ -1,6 +1,10 @@
 #include"renderMesh.h"
 #include <stddef.h>
 #include "common/gfxwrapper_opengl.h"
+#include <android/log.h>
+
+#define LOG_TAG "renderMesh"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 renderMesh::renderMesh(){
 
@@ -23,7 +27,75 @@ renderMesh::renderMesh(std::vector<renderVertex> vertices, std::vector<unsigned 
     setupMesh();
 }
 
+renderMesh::~renderMesh() {
+    if (mVAO != 0) glDeleteVertexArrays(1, &mVAO);
+    if (mVBO != 0) glDeleteBuffers(1, &mVBO);
+    if (mEBO != 0) glDeleteBuffers(1, &mEBO);
+    if (mVBO_transform != 0) glDeleteBuffers(1, &mVBO_transform);
+}
+
+renderMesh::renderMesh(renderMesh&& other) noexcept
+    : mVertices(std::move(other.mVertices)),
+      mIndices(std::move(other.mIndices)),
+      mTextures(std::move(other.mTextures)),
+      mPbrMaterial(std::move(other.mPbrMaterial)),
+      mTransformNum(other.mTransformNum),
+      mTransformVector(std::move(other.mTransformVector)),
+      mFramebuffer(other.mFramebuffer),
+      mVAO(other.mVAO),
+      mVBO(other.mVBO),
+      mEBO(other.mEBO),
+      mVBO_transform(other.mVBO_transform)
+{
+    other.mFramebuffer = 0;
+    other.mVAO = 0;
+    other.mVBO = 0;
+    other.mEBO = 0;
+    other.mVBO_transform = 0;
+}
+
+renderMesh& renderMesh::operator=(renderMesh&& other) noexcept {
+    if (this != &other) {
+        if (mVAO != 0) glDeleteVertexArrays(1, &mVAO);
+        if (mVBO != 0) glDeleteBuffers(1, &mVBO);
+        if (mEBO != 0) glDeleteBuffers(1, &mEBO);
+        if (mVBO_transform != 0) glDeleteBuffers(1, &mVBO_transform);
+
+        mVertices = std::move(other.mVertices);
+        mIndices = std::move(other.mIndices);
+        mTextures = std::move(other.mTextures);
+        
+        // Use copy assignment for pbrMaterial to ensure data is transferred correctly
+        mPbrMaterial = other.mPbrMaterial;
+        
+        mTransformNum = other.mTransformNum;
+        mTransformVector = std::move(other.mTransformVector);
+        
+        mFramebuffer = other.mFramebuffer;
+        mVAO = other.mVAO;
+        mVBO = other.mVBO;
+        mEBO = other.mEBO;
+        mVBO_transform = other.mVBO_transform;
+
+        other.mFramebuffer = 0;
+        other.mVAO = 0;
+        other.mVBO = 0;
+        other.mEBO = 0;
+        other.mVBO_transform = 0;
+        
+        // Debug log
+        // LOGI("renderMesh updated. VAO: %d, Albedo: %.2f %.2f %.2f", mVAO, mPbrMaterial.albedoValue.x, mPbrMaterial.albedoValue.y, mPbrMaterial.albedoValue.z);
+    }
+    return *this;
+}
+
 void renderMesh::setupMesh() {
+    // Cleanup existing buffers if they exist (re-initialization case)
+    if (mVAO != 0) { glDeleteVertexArrays(1, &mVAO); mVAO = 0; }
+    if (mVBO != 0) { glDeleteBuffers(1, &mVBO); mVBO = 0; }
+    if (mEBO != 0) { glDeleteBuffers(1, &mEBO); mEBO = 0; }
+    if (mVBO_transform != 0) { glDeleteBuffers(1, &mVBO_transform); mVBO_transform = 0; }
+
     // create buffers/arrays
     //glGenFramebuffers(1, &mFramebuffer);
     //glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
