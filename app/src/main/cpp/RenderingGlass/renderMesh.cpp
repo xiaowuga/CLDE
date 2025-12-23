@@ -1,6 +1,10 @@
 #include"renderMesh.h"
 #include <stddef.h>
 #include "common/gfxwrapper_opengl.h"
+#include <android/log.h>
+
+#define LOG_TAG "renderMesh"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 renderMesh::renderMesh(){
 
@@ -60,7 +64,10 @@ renderMesh& renderMesh::operator=(renderMesh&& other) noexcept {
         mVertices = std::move(other.mVertices);
         mIndices = std::move(other.mIndices);
         mTextures = std::move(other.mTextures);
-        mPbrMaterial = std::move(other.mPbrMaterial);
+        
+        // Use copy assignment for pbrMaterial to ensure data is transferred correctly
+        mPbrMaterial = other.mPbrMaterial;
+        
         mTransformNum = other.mTransformNum;
         mTransformVector = std::move(other.mTransformVector);
         
@@ -75,6 +82,9 @@ renderMesh& renderMesh::operator=(renderMesh&& other) noexcept {
         other.mVBO = 0;
         other.mEBO = 0;
         other.mVBO_transform = 0;
+        
+        // Debug log
+        // LOGI("renderMesh updated. VAO: %d, Albedo: %.2f %.2f %.2f", mVAO, mPbrMaterial.albedoValue.x, mPbrMaterial.albedoValue.y, mPbrMaterial.albedoValue.z);
     }
     return *this;
 }
