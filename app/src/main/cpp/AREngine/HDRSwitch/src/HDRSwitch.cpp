@@ -13,7 +13,7 @@ using namespace std;
 
 
 int HDRSwitch::Init(AppData &appData, SceneData &sceneData, FrameDataPtr frameDataPtr) {
-    environmentalState = 0;
+    environmentalState = appData.environmentalState;
     return STATE_OK;
 }
 

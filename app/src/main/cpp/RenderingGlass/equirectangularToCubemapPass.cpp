@@ -12,6 +12,7 @@ EquirectangularToCubemapPass::EquirectangularToCubemapPass() : TemplatePass() {}
 EquirectangularToCubemapPass::~EquirectangularToCubemapPass() {}
 
 bool EquirectangularToCubemapPass::render(const glm::mat4 &p, const glm::mat4 &v, const glm::mat4 &m) {
+
 //    return TemplatePass::render(p, v, m);
     return true;
 }
@@ -43,13 +44,14 @@ void EquirectangularToCubemapPass::initShader() {
     // ---------------------------------
     stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
+
     std::vector<char> buffer = readFileFromAssets("textures/hdr/studio.hdr");
     float* data = stbi_loadf_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &width, &height, &nrComponents, 0);
-    unsigned int hdrTexture;
+
     if (data)
     {
-        glGenTextures(1, &hdrTexture);
-        glBindTexture(GL_TEXTURE_2D, hdrTexture);
+        glGenTextures(1, &hdrTextures[0]);
+        glBindTexture(GL_TEXTURE_2D, hdrTextures[0]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data); // note how we specify the texture's data value to be float
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -63,11 +65,43 @@ void EquirectangularToCubemapPass::initShader() {
     {
         printf("Failed to load HDR image.\n");
     }
+
+    // 加载第二个HDR贴图
+    std::vector<char> buffer2 = readFileFromAssets("textures/hdr/newport_loft.hdr");  // 你的第二个HDR文件
+    float* data2 = stbi_loadf_from_memory(reinterpret_cast<const stbi_uc*>(buffer2.data()), buffer2.size(), &width, &height, &nrComponents, 0);
+
+    if (data2) {
+        glGenTextures(1, &hdrTextures[1]);
+        glBindTexture(GL_TEXTURE_2D, hdrTextures[1]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data2);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data2);
+    } else {
+        printf("Failed to load second HDR image.\n");
+    }
+
     // pbr: setup cubemap to render to and attach to framebuffer
     // ---------------------------------------------------------
 
-    glGenTextures(1, &mEnvCubemap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubemap);
+    glGenTextures(2, mEnvCubemaps);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubemaps[0]);
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // enable pre-filter mipmap sampling (combatting visible dots artifact)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubemaps[1]);
     for (unsigned int i = 0; i < 6; ++i)
     {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
@@ -90,27 +124,58 @@ void EquirectangularToCubemapPass::initShader() {
 
     // pbr: convert HDR equirectangular environment map to cubemap equivalent
     // ----------------------------------------------------------------------
+    // 绑定shader
     mShader.use();
-    mShader.setUniformInt("equirectangularMap", 0);
+
     mShader.setUniformMat4("projection", mCaptureProjection);
+
+    mShader.setUniformInt("equirectangularMap", 0);
+    mShader.setUniformInt("equirectangularMap1", 1);
+
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, hdrTexture);
+    glBindTexture(GL_TEXTURE_2D, hdrTextures[0]);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, hdrTextures[1]);
 
     glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, mCaptureFBO);
+
+    // 渲染第一个Cubemap（对应第一个HDR贴图）
+    mShader.setUniformInt("hdrTextureIndex", 0);
+
     for (unsigned int i = 0; i < 6; ++i)
     {
         mShader.setUniformMat4("view", mCaptureViews[i]);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mEnvCubemap, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mEnvCubemaps[0], 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         renderCube();
     }
+
+    // 渲染第二个Cubemap（对应第二个HDR贴图）
+    mShader.setUniformInt("hdrTextureIndex", 1);
+
+    for (unsigned int i = 0; i < 6; ++i)
+    {
+        mShader.setUniformMat4("view", mCaptureViews[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mEnvCubemaps[1], 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        renderCube();
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // then let OpenGL generate mipmaps from first mip face (combatting visible dots artifact)
-    glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubemap);
-    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    // 为两个cubemap生成mipmaps
+    for (int i = 0; i < 2; ++i) {
+        glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubemaps[i]);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    }
+
+    mEnvCubemap = mEnvCubemaps[0];
+
     glUseProgram(0);
 }
 

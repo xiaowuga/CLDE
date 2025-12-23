@@ -13,14 +13,16 @@ public:
 
     virtual bool render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m) override;
     virtual void render(const glm::mat4& p, const glm::mat4& v);
-
-    unsigned int getPrefilterMap() const {return mPrefilterMap;}
-
-protected:
     virtual void initShader() override;
     virtual void draw() override;
+
+    unsigned int getPrefilterMap() const {return mPrefilterMap;}
+    void setPrefilterMap(int i) {mPrefilterMap = mPrefilterMaps[i];}
+
+protected:
 private:
     void renderCube();
+    unsigned int mPrefilterMaps[2];
     unsigned int mPrefilterMap;
     unsigned int cubeVAO = 0;
     unsigned int cubeVBO = 0;

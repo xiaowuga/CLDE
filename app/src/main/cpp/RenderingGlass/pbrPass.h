@@ -11,6 +11,7 @@ public:
     virtual bool render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m) override;
     virtual void render(const glm::mat4& p, const glm::mat4& v);
     virtual void render(const glm::mat4 &p, const glm::mat4 &v, const std::vector<glm::mat4> &m);
+    void setLightChange(bool isChange){lightChange = isChange;}
     void renderSphere();
 protected:
     virtual void initShader() override;
@@ -19,6 +20,7 @@ protected:
 
     unsigned int sphereVAO = 0;
     unsigned int indexCount;
+    bool lightChange = false;
 private:
     //test
     unsigned int ironAlbedoMap;

@@ -29,21 +29,11 @@ int RenderClient::Init(AppData& appData, SceneData& sceneData, FrameDataPtr fram
     mModel->shaderInit();
     mTextRender = std::make_shared<Text>();
     mTextRender->initialize();
-//    sceneData.getObject<SceneModel>();
-//    mModel->loadFbModel("YIBIAOPAN.fb" ,appData.dataDir + "Models");
-//    mModel->loadFbModel(appData.dataDir + "Models/YIBIAOPAN.fb");
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di1.fb"));
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di2.fb"));
-//    mModel->loadFbModel(MakeSdcardPath("Download/FbModel/di3.fb"));
-//    mModel->loadFbModel("TUILIGAN.fb","/storage/emulated/0/Download/FbModel");
 
     auto scene_virtualObjects = sceneData.getAllObjectsOfType<SceneModel>();
     for(int i = 0; i < scene_virtualObjects.size(); i ++){
         mModel->loadFbModel(scene_virtualObjects[i]->name, scene_virtualObjects[i]->filePath);
     }
-
-//    mModel->pushMeshFromCustomData();
-//    mModel->countIndiceSum();
 
     //加载模型的动画数据：Action + State
     cadDataManager::DataInterface::loadAnimationActionData(appData.animationActionConfigFile);
@@ -136,7 +126,7 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
             }
         }
         //高亮模型
-        highlightInstance(modelName, instanceId);
+//        highlightInstance(modelName, instanceId);
     }
 
 //    {//测试接口用代码，推力杆会动
@@ -196,13 +186,31 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
     mGizmoPass->render(project, view);
     mPbrPass->render(project, view, joc);
 
-
     wchar_t text[1024] = {0};
     std::string fps_str = std::to_string(int(getFps()));
     swprintf(text, 1024, L"fps:%s",  fps_str.c_str());
     mTextRender->render(0.5,0.5, 1.0, text, wcslen(text), glm::vec3(0.0, 1.0, 0.0));
-    updateFrameCount();
 
+    updateFrameCount();
+//    auto testNum = getFps();
+//    testNum = getIndiceSum();
+//    testNum = getFps();
+    if(appData.environmentalState != environmentalState){
+        environmentalState = appData.environmentalState;
+//        auto& passManager = RenderPassManager::getInstance();
+//        auto pbrPass = passManager.getPassAs<PbrPass>("pbr");
+//        pbrPass->setLightChange(true);
+
+        auto& passManager = RenderPassManager::getInstance();
+        auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
+        equiPass->setEnvCubeMap(environmentalState);
+
+        auto irradiancePass = passManager.getPassAs<IrradiancePass>("irradiance");
+        irradiancePass->setIrradianceMap(environmentalState);
+
+        auto prefilterPass = passManager.getPassAs<PrefilterPass>("prefilter");
+        prefilterPass->setPrefilterMap(environmentalState);
+    }
 
     return STATE_OK;
 }

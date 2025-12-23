@@ -35,7 +35,7 @@ namespace {
         modules.push_back(createModule<CameraTracking>("CameraTracking"));
         modules.push_back(createModule<Location>("Location"));
 
-//        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
+        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
         modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
         modules.push_back(createModule<CollisionDetection>("CollisionDetection"));
@@ -61,6 +61,7 @@ namespace {
         appData->isSaveMap = false;
         appData->updateMarkerPoseInMap = false;
         appData->isCaptureOfflineData = false;
+        appData->environmentalState = 0;
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
                                                "di7", "di8",
 //                                                "Marker",

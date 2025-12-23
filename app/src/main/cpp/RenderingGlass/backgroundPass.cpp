@@ -21,15 +21,15 @@ void BackgroundPass::render(const glm::mat4 &p, const glm::mat4 &v) {
 #if 1
     auto& passManager = RenderPassManager::getInstance();
     auto equiPass = passManager.getPassAs<EquirectangularToCubemapPass>("equirectangularToCubemap");
-    GLuint captureFBO = equiPass->getCaptureFBO();
-    GLuint captureRBO = equiPass->getCaptureRbo();
-    GLuint envCubemap = equiPass->getEnvCubemap();
+    GLuint *captureFBO = equiPass->getCaptureFBO();
+    GLuint *captureRBO = equiPass->getCaptureRbo();
+    GLuint *envCubemap = equiPass->getEnvCubemap();
     glm::mat4 captureProjection = equiPass->getCaptureProjection();
     mShader.use();
     mShader.setUniformMat4("projection", p);
     mShader.setUniformMat4("view", v);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *envCubemap);
     renderCube();
     glUseProgram(0);
 //    auto brdfPass = passManager.getPassAs<BrdfPass>("brdf");

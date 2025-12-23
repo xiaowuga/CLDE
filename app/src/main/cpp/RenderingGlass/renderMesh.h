@@ -42,6 +42,18 @@ public:
          std::vector<renderTexture> textures, pbrMaterial pbrMaterial, int transformNum,
          std::vector<float> transformVector);
 
+
+//     Destructor to clean up resources
+    ~renderMesh();
+
+//     Disable copying to prevent double-free of OpenGL resources
+    renderMesh(const renderMesh&) = delete;
+    renderMesh& operator=(const renderMesh&) = delete;
+
+    // Enable moving
+    renderMesh(renderMesh&& other) noexcept;
+    renderMesh& operator=(renderMesh&& other) noexcept;
+
     void draw(renderShader& shader);
     void drawPBR(renderShader& shader);
     void drawShadowMap(renderShader& shader) const;

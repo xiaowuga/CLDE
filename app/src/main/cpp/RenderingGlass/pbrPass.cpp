@@ -119,8 +119,6 @@ bool PbrPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m)
     passManager.restoreViewport();
     // render
     // ------
-//    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // render scene, supplying the convoluted irradiance map to the final shader.
     // ------------------------------------------------------------------------------------------
     glEnable(GL_DEPTH_TEST);
@@ -170,14 +168,6 @@ bool PbrPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m)
     glm::mat4 model = glm::scale(m,glm::vec3 (0.001f));
     mShader.setUniformMat4("model", model);
 
-//    glm::mat4 lightmodel = glm::mat4(1.0f);
-//    glm::vec3 newLightPos = glm::translate(model, glm::vec3(50.0f, 50.0f, 150.0f))*glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//    glm::mat4 newLightView = glm::lookAt(newLightPos, glm::vec3(model[3]), glm::vec3(0.0f, 1.0f, 0.0f));
-//    mShader.setUniformMat4("projection", lightProjection);
-//    glm::mat4 model = glm::mat4(1.0f);
-//    glm::mat4 view = camera.GetViewMatrix();
-//    mShader.setUniformMat4("view", lightView);
-
     mShader.setUniformVec3("lightPos", lightPos);
     mShader.setUniformMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 //TODO: gyp: 要加上缩放
@@ -211,6 +201,7 @@ bool PbrPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m)
     mShader.setUniformBool("useMetallicMap",true);
     mShader.setUniformBool("useRoughnessMap",true);
     mShader.setUniformBool("useAoMap",true);
+    mShader.setUniformBool("lightChange", lightChange);
     // floor
 //    auto planeVAO = shadowPass->getPlaneVao();
 //    model = glm::mat4(1.0f);
@@ -310,34 +301,6 @@ void PbrPass::render(const glm::mat4 &p, const glm::mat4 &v) {
     glm::mat4 lightProjection = shadowPass->getLightProjection();
     glm::mat4 lightView = shadowPass->getLightView();
 
-
-#if 1
-//    glm::mat4 lightProjection, lightView;
-//    model = glm::mat4(1.0f);
-//    model = glm::translate(model, glm::vec3(0.0, 2.0, -15.0));
-//    lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
-//    lightPos = glm::vec3(model * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-//    lightProjection = glm::ortho(-10.0f, 10.0f, -5.0f, 5.0f, 0.05f, 100.f);
-////    lightProjection = glm::perspective(glm::radians(45.0f), 1.f, 1.f, 100.5f);
-//    lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-//    lightSpaceMatrix = lightProjection * lightView;
-
-//    lightProjection = glm::perspective(glm::radians(45.0f), 1.f, 1.f, 100.5f);
-//    lightView = glm::mat4(
-//            0.999f, -0.04f, 0.001f, 0.0f,
-//            0.04f, 0.999f, 0.08f, 0.0f,
-//            -0.00f, -0.08f, 0.99f, 0.0f,
-//            0.12f, -0.02f, 0.016f, 1.0f
-//    );
-//    lightProjection = glm::mat4(
-//            2.7f, -0.f, 0.000f, 0.0f,
-//            0.00f, 4.3f, 0.08f, 0.0f,
-//            -0.02f, 0.39f, -1.001f, -1.f,
-//            0.0f, -0.00f, -0.1f, 0.f
-//    );
-//    mShader.setUniformMat4("projection", lightProjection);
-//    mShader.setUniformMat4("view", lightView);
-#endif
     // set light uniforms
 //    mShader.setUniformVec3("viewPos", camera.Position);
     mShader.setUniformVec3("lightPos", lightPos);

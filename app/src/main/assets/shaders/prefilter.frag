@@ -4,6 +4,8 @@ out vec4 FragColor;
 in vec3 WorldPos;
 
 uniform samplerCube environmentMap;
+uniform samplerCube environmentMap1;  // 第二个HDR贴图
+uniform int hdrTextureIndex;            // 选择使用哪个贴图 (0 或 1)
 uniform float roughness;
 
 const float PI = 3.14159265359;
@@ -96,7 +98,12 @@ void main()
 
             float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
 
-            prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;
+            if (hdrTextureIndex == 0) {
+                prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;
+            } else {
+                prefilteredColor += textureLod(environmentMap1, L, mipLevel).rgb * NdotL;
+            }
+            //prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;
             totalWeight      += NdotL;
         }
     }
