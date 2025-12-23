@@ -32,8 +32,9 @@ namespace {
 
         std::vector<ARModulePtr> modules;
         modules.push_back(createModule<ARInputs>("ARInputs"));
-        modules.push_back(createModule<Location>("Location"));
         modules.push_back(createModule<CameraTracking>("CameraTracking"));
+        modules.push_back(createModule<Location>("Location"));
+
 //        modules.push_back(createModule<HDRSwitch>("HDRSwitch"));
         modules.push_back(createModule<PoseEstimationRokid>("PoseEstimationRokid"));
         modules.push_back(createModule<GestureUnderstanding>("GestureUnderstanding"));
@@ -56,10 +57,10 @@ namespace {
         appData->animationStateConfigFile = appData->dataDir + "CockpitAnimationState.json";
 
         // Map setting
-        appData->isLoadMap = true;
+        appData->isLoadMap = false;
         appData->isSaveMap = false;
-        appData->isOnlyUseMarkerLocation = false;
-
+        appData->updateMarkerPoseInMap = false;
+        appData->isCaptureOfflineData = false;
         std::vector<std::string> model_list = {"di0", "di1", "di2", "di3", "di5",
                                                "di7", "di8",
 //                                                "Marker",
@@ -110,12 +111,13 @@ namespace {
             auto frameData = _eng->frameData;
             Rendering->Init(*_eng->appData.get(), *_eng->sceneData.get(), frameData);
             if(_eng->appData->isLoadMap)
-                _eng->connectServer("192.168.1.104", 1123);
+                _eng->connectServer("192.168.1.103", 1123);
             _eng->start();
 
 
             return true;
         }
+
         virtual void renderFrame(const XrPosef &pose,const glm::mat4 &project,const glm::mat4 &view,int32_t eye){ //由于接口更改，以前的renderFrame函数不再适用，换用以下写法(2025-06-17)
 
             auto frameData=std::make_shared<FrameData>();

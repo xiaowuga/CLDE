@@ -24,6 +24,7 @@
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
 #include "glm/glm.hpp"
+//#include "arucopp.h"
 
 
 class CameraTracking: public ARModule {
@@ -44,19 +45,28 @@ public:
     int ShutDown(AppData& appData,  SceneData& sceneData) override;
 private:
 
-
-    std::string alignTransformLastFile;
-
-    cv::Mat alignTransform; // SLAM -> Reloc
-    cv::Mat alignTransformLast; // SLAM -> Reloc
-    cv::Mat selfSlamPose;
+    bool isAlign;
 
 
-    std::string offline_data_dir;
-    glm::mat4 m_worldAlignMatrix;
-    glm::mat4 m_lastAlignMatrix;
-    std::vector<glm::mat4> m_alignTrajectoryCache;
-    std::shared_mutex m_dataMutex;
+    std::shared_mutex dataMutex;
+    glm::mat4 worldAlignMatrix;
+    std::vector<glm::mat4> alignTrajectoryCache;
+
+
+    std::string makerPoseInMapFile;
+    glm::mat4 markerPoseInMap;
+    glm::mat4 markerPoseInLocal;
+    glm::mat4 markerPoseInCockpit;
+    glm::mat4 cameraPoseInLocal;
+    glm::mat4 trnasMapRef2Map;
+    glm::mat4 transLocal2MapRef;
+//    ArucoPP arucoDetector;
+
+
+    std::string trnasMap2MapRefFile;
+    std::string markerPoseInMapFile;
+    std::string offlineDataDir;
+
 };
 
 // #include "CameraTracking.cpp"

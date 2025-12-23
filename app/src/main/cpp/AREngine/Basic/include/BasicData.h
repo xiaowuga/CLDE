@@ -416,8 +416,9 @@ class FrameData : public BasicData
 public:
 
     FrameData() {
-        alignTrans = glm::mat4(1.0);
-        alignTransG2M = glm::mat4(1.0);
+//        alignTrans =
+//        alignTransG2M = glm::mat4(1.0);
+//        isAlign = false;
     }
 
     ~FrameData() {}
@@ -439,6 +440,7 @@ public:
     std::vector<double> viewVector;
     glm::mat4 alignTrans;
     glm::mat4 alignTransG2M; //glass -> map, 由云端服务器返回
+    bool isAlign;
     cv::Mat imgColor;
     cv::Mat imgDepth;
     double timestamp;  // unit: s
@@ -658,17 +660,15 @@ public:
 
     bool isLoadMap;
     bool isSaveMap;
-    bool isOnlyUseMarkerLocation;
-    // // first run
-    // bool isLoadMap = false;
-    // bool isSaveMap = true;
-    // second run
-    // bool isLoadMap = true;
-    // bool isSaveMap = false;
+    bool isCaptureOfflineData;
+    bool updateMarkerPoseInMap;
+
 
     //todo add your variable here
     //各算法单位需根据自己的需求在此新增变量或参数，如新增变量较复杂，可新建一个头文件
     std::string interactionConfigFile = "InteractionConfig.json";
+    std::string markerPoseInMapFile = "";
+    std::string markerPoseInCockpit = "";
 };
 
 typedef std::shared_ptr<FrameData> FrameDataPtr;

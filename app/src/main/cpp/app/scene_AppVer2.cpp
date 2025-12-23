@@ -57,7 +57,7 @@ namespace {
         // Map setting
         appData->isLoadMap = false;
         appData->isSaveMap = false;
-        appData->isOnlyUseMarkerLocation = true;
+//        appData->isOnlyUseMarkerLocation = true;
 
         appData->record = true;
 
