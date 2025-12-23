@@ -23,9 +23,9 @@ public:
     void setTextureIndex(unsigned int i){textureIndex = i;}
     void setEnvCubeMap(int i){mEnvCubemap = mEnvCubemaps[i];}
     // 获取指定索引的Cubemap
-    GLuint getEnvCubemapByIndex(int index) const {
+    const GLuint* getEnvCubemapByIndex(int index) const {
         if (index >= 0 && index < 2)
-            return mEnvCubemaps[index];
+            return &mEnvCubemaps[index];
         return 0;
     }
 

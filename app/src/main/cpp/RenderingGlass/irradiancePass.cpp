@@ -32,8 +32,8 @@ void IrradiancePass::initShader() {
     GLuint *captureFBO = equiPass->getCaptureFBO();
     GLuint *captureRBO = equiPass->getCaptureRbo();
     GLuint *envCubemap = equiPass->getEnvCubemap();
-    GLuint envCubemap0 = equiPass->getEnvCubemapByIndex(0);
-    GLuint envCubemap1 = equiPass->getEnvCubemapByIndex(1);
+    const GLuint* envCubemap0 = equiPass->getEnvCubemapByIndex(0);
+    const GLuint* envCubemap1 = equiPass->getEnvCubemapByIndex(1);
     glm::mat4 captureProjection = equiPass->getCaptureProjection();
     const glm::mat4* captureViews = equiPass->getCaptureViews();
 
@@ -79,9 +79,9 @@ void IrradiancePass::initShader() {
     mShader.setUniformMat4("projection", captureProjection);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *envCubemap0);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *envCubemap1);
 
     glViewport(0, 0, 32, 32); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
@@ -110,7 +110,7 @@ void IrradiancePass::initShader() {
         renderCube();
     }
 
-    mIrradianceMap = mIrradianceMaps[1];
+    mIrradianceMap = mIrradianceMaps[0];
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 }

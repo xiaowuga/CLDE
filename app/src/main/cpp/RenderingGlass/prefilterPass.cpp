@@ -34,8 +34,8 @@ void PrefilterPass::initShader() {
     GLuint *captureFBO = equiPass->getCaptureFBO();
     GLuint *captureRBO = equiPass->getCaptureRbo();
     GLuint *envCubemap = equiPass->getEnvCubemap();
-    GLuint envCubemap0 = equiPass->getEnvCubemapByIndex(0);
-    GLuint envCubemap1 = equiPass->getEnvCubemapByIndex(1);
+    const GLuint* envCubemap0 = equiPass->getEnvCubemapByIndex(0);
+    const GLuint* envCubemap1 = equiPass->getEnvCubemapByIndex(1);
     glm::mat4 captureProjection = equiPass->getCaptureProjection();
     const glm::mat4* captureViews = equiPass->getCaptureViews();
 
@@ -75,9 +75,9 @@ void PrefilterPass::initShader() {
     mShader.setUniformInt("environmentMap1", 1);
     mShader.setUniformMat4("projection", captureProjection);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *envCubemap0);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *envCubemap1);
 
     glBindFramebuffer(GL_FRAMEBUFFER, *captureFBO);
     unsigned int maxMipLevels = 5;
@@ -129,7 +129,7 @@ void PrefilterPass::initShader() {
             renderCube();
         }
     }
-    mPrefilterMap = mPrefilterMaps[1];
+    mPrefilterMap = mPrefilterMaps[0];
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 }
