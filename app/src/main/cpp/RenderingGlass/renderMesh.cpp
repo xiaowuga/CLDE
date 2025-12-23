@@ -80,6 +80,12 @@ renderMesh& renderMesh::operator=(renderMesh&& other) noexcept {
 }
 
 void renderMesh::setupMesh() {
+    // Cleanup existing buffers if they exist (re-initialization case)
+    if (mVAO != 0) { glDeleteVertexArrays(1, &mVAO); mVAO = 0; }
+    if (mVBO != 0) { glDeleteBuffers(1, &mVBO); mVBO = 0; }
+    if (mEBO != 0) { glDeleteBuffers(1, &mEBO); mEBO = 0; }
+    if (mVBO_transform != 0) { glDeleteBuffers(1, &mVBO_transform); mVBO_transform = 0; }
+
     // create buffers/arrays
     //glGenFramebuffers(1, &mFramebuffer);
     //glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
