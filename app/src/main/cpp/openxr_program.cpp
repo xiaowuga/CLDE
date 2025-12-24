@@ -1457,6 +1457,26 @@ struct OpenXrProgram : IOpenXrProgram {
         res = xrLocateSpace(m_ViewSpace, m_appSpace, predictedDisplayTime, &spaceLocation);
         CHECK_XRRESULT(res, "xrLocateSpace");
 
+        if ((spaceLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0) {
+            // 获取 View 空间下的重力方向
+            XrMatrix4x4f rotationMatrix;
+            XrMatrix4x4f_CreateFromQuaternion(&rotationMatrix, &spaceLocation.pose.orientation);
+            
+            // 计算旋转矩阵的逆矩阵（对于纯旋转矩阵，逆矩阵即为转置矩阵）
+            XrMatrix4x4f invRotationMatrix;
+            XrMatrix4x4f_Transpose(&invRotationMatrix, &rotationMatrix);
+            
+            // 世界坐标系下的重力 (0, -1, 0)
+            XrVector3f gravityWorld = {0.0f, -1.0f, 0.0f};
+            XrVector3f gravityInView;
+            
+            // 变换到 View 空间
+            XrMatrix4x4f_TransformVector3f(&gravityInView, &invRotationMatrix, &gravityWorld);
+            
+            // 输出日志（调试用，你可以取消注释查看）
+            // Log::Write(Log::Level::Info, Fmt("Gravity in View Space: (%f, %f, %f)", gravityInView.x, gravityInView.y, gravityInView.z));
+        }
+
         XrPosef pose[Side::COUNT];
         for (uint32_t i = 0; i < viewCountOutput; i++) {
             pose[i] = m_views[i].pose;
