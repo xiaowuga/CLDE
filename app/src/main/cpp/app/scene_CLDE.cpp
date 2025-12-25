@@ -24,6 +24,7 @@
 
 #include "RenderingGlass/RenderClient.h"
 
+
 namespace {
 
 
