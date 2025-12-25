@@ -229,13 +229,13 @@ namespace MyCollisionHandlers {
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
             if (cur_right_hand_gesture == Gesture::GRASP) {
-                if(_frameDataPtr->tip_velocity[0] > 0.02){
+                //if(_frameDataPtr->tip_velocity[0] > 0.02){
                     targetStateIndex = currentStateIndex + 1;
                     targetStateIndex = targetStateIndex > allSateSize - 1 ? allSateSize - 1 : targetStateIndex;
-                }else if(_frameDataPtr->tip_velocity[0] < -0.02){
-                    targetStateIndex = currentStateIndex - 1;
-                    targetStateIndex = targetStateIndex < 0 ? 0 : targetStateIndex;
-                }
+                //}else if(_frameDataPtr->tip_velocity[0] < -0.02){
+                //    targetStateIndex = currentStateIndex - 1;
+                //    targetStateIndex = targetStateIndex < 0 ? 0 : targetStateIndex;
+                //}
             }
             if(currentStateIndex != targetStateIndex){
                 animationPlaying = true;
