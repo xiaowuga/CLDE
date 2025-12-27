@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "pch.h"
+#include <android/sensor.h>
+#include <android/looper.h>
 #include "common.h"
 #include "options.h"
 #include "platformdata.h"
@@ -108,6 +110,12 @@ struct OpenXrProgram : IOpenXrProgram {
         }
 
     ~OpenXrProgram() override {
+        // Cleanup Android Sensor
+        if (m_sensorManager && m_sensorEventQueue) {
+            ASensorManager_destroyEventQueue(m_sensorManager, m_sensorEventQueue);
+            m_sensorEventQueue = nullptr;
+        }
+
         if (m_input.actionSet != XR_NULL_HANDLE) {
             for (auto hand : {Side::LEFT, Side::RIGHT}) {
                 xrDestroySpace(m_input.handSpace[hand]);
@@ -957,6 +965,69 @@ struct OpenXrProgram : IOpenXrProgram {
         }
     }
 
+    void InitializeAndroidSensor() {
+        m_sensorManager = ASensorManager_getInstance();
+        if (m_sensorManager) {
+            // Try to get Gravity sensor first
+            m_gravitySensor = ASensorManager_getDefaultSensor(m_sensorManager, ASENSOR_TYPE_GRAVITY);
+            if (!m_gravitySensor) {
+                // Fallback to Accelerometer if Gravity not available (though less accurate for pure gravity)
+                m_gravitySensor = ASensorManager_getDefaultSensor(m_sensorManager, ASENSOR_TYPE_ACCELEROMETER);
+                Log::Write(Log::Level::Warning, "Gravity Sensor not found, using Accelerometer instead.");
+            }
+
+            if (m_gravitySensor) {
+                m_looper = ALooper_forThread();
+                if (!m_looper) {
+                    m_looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+                }
+                
+                if (m_looper) {
+                    m_sensorEventQueue = ASensorManager_createEventQueue(m_sensorManager, m_looper, 3, nullptr, nullptr);
+                    if (m_sensorEventQueue) {
+                        ASensorEventQueue_enableSensor(m_sensorEventQueue, m_gravitySensor);
+                        // Set event rate to 20ms (20000us)
+                        ASensorEventQueue_setEventRate(m_sensorEventQueue, m_gravitySensor, 20000);
+                        Log::Write(Log::Level::Info, "Android Gravity Sensor Initialized Successfully");
+                    } else {
+                        Log::Write(Log::Level::Error, "Failed to create Sensor Event Queue");
+                    }
+                } else {
+                    Log::Write(Log::Level::Error, "Failed to get Looper for Sensor");
+                }
+            } else {
+                Log::Write(Log::Level::Error, "No suitable gravity sensor found");
+            }
+        } else {
+             Log::Write(Log::Level::Error, "Failed to get ASensorManager");
+        }
+    }
+
+    void PollSensorData() {
+        if (!m_sensorEventQueue || !m_looper) return;
+
+        int ident;
+        int events;
+        void* data;
+
+        // Poll for events. timeoutMillis = 0 for non-blocking.
+        while ((ident = ALooper_pollAll(0, nullptr, &events, &data)) >= 0) {
+            if (ident == 3) {
+                ASensorEvent event;
+                while (ASensorEventQueue_getEvents(m_sensorEventQueue, &event, 1) > 0) {
+                    if (event.type == ASENSOR_TYPE_GRAVITY || event.type == ASENSOR_TYPE_ACCELEROMETER) {
+                        m_currentGravity.x = event.vector.x;
+                        m_currentGravity.y = event.vector.y;
+                        m_currentGravity.z = event.vector.z;
+                        
+                        // Debug log (optional)
+                        // Log::Write(Log::Level::Verbose, Fmt("Sensor Gravity: %f, %f, %f", m_currentGravity.x, m_currentGravity.y, m_currentGravity.z));
+                    }
+                }
+            }
+        }
+    }
+
     void CreateVisualizedSpaces() {
         CHECK(m_session != XR_NULL_HANDLE);
         XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
@@ -981,6 +1052,7 @@ struct OpenXrProgram : IOpenXrProgram {
         LogReferenceSpaces();
         InitializeActions();
         CreateVisualizedSpaces();
+        InitializeAndroidSensor(); // Initialize Android Sensor
 
         {
             XrReferenceSpaceCreateInfo referenceSpaceCreateInfo = GetXrReferenceSpaceCreateInfo(m_options.AppSpace);
@@ -1348,6 +1420,10 @@ struct OpenXrProgram : IOpenXrProgram {
 
     void RenderFrame() override {
         CHECK(m_session != XR_NULL_HANDLE);
+        
+        // Poll Android Sensor Data
+        PollSensorData();
+
         XrFrameWaitInfo frameWaitInfo{XR_TYPE_FRAME_WAIT_INFO};
         XrFrameState frameState{XR_TYPE_FRAME_STATE};
         CHECK_XRCMD(xrWaitFrame(m_session, &frameWaitInfo, &frameState));
@@ -1457,6 +1533,26 @@ struct OpenXrProgram : IOpenXrProgram {
         res = xrLocateSpace(m_ViewSpace, m_appSpace, predictedDisplayTime, &spaceLocation);
         CHECK_XRRESULT(res, "xrLocateSpace");
 
+        if ((spaceLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0) {
+            // 获取 View 空间下的重力方向
+            XrMatrix4x4f rotationMatrix;
+            XrMatrix4x4f_CreateFromQuaternion(&rotationMatrix, &spaceLocation.pose.orientation);
+            
+            // 计算旋转矩阵的逆矩阵（对于纯旋转矩阵，逆矩阵即为转置矩阵）
+            XrMatrix4x4f invRotationMatrix;
+            XrMatrix4x4f_Transpose(&invRotationMatrix, &rotationMatrix);
+            
+            // 世界坐标系下的重力 (0, -1, 0)
+            XrVector3f gravityWorld = {0.0f, -1.0f, 0.0f};
+            XrVector3f gravityInView;
+            
+            // 变换到 View 空间
+            XrMatrix4x4f_TransformVector3f(&gravityInView, &invRotationMatrix, &gravityWorld);
+            
+            // 输出日志（调试用，你可以取消注释查看）
+            // Log::Write(Log::Level::Info, Fmt("Gravity in View Space: (%f, %f, %f)", gravityInView.x, gravityInView.y, gravityInView.z));
+        }
+
         XrPosef pose[Side::COUNT];
         for (uint32_t i = 0; i < viewCountOutput; i++) {
             pose[i] = m_views[i].pose;
@@ -1535,6 +1631,13 @@ struct OpenXrProgram : IOpenXrProgram {
         ApplicationEvent m_applicationEvent[Side::COUNT] = {0};
 
         bool ExitAppByKey = false;
+
+        // Android Sensor
+        ASensorManager* m_sensorManager{nullptr};
+        const ASensor* m_gravitySensor{nullptr};
+        ASensorEventQueue* m_sensorEventQueue{nullptr};
+        ALooper* m_looper{nullptr};
+        XrVector3f m_currentGravity{0.0f, -9.8f, 0.0f}; // Default gravity
     };
 }  // namespace
 
