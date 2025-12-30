@@ -415,7 +415,7 @@ int CameraTracking::ProRemoteReturn(RemoteProcPtr proc){
             float det = glm::determinant(tmp);
             LOGI("transLocal2MapRefasdasd=%.3f", det);
             if (!std::isnan(det)) {
-                transLocal2MapRef = tmp;
+//                transLocal2MapRef = tmp;
                 isAlign = true;
             }
         }

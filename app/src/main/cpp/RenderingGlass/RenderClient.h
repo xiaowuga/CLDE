@@ -56,6 +56,7 @@ private:
     std::string instanceId   = "";
     std::string originState  = "";
     std::string targetState  = "";
+    std::unordered_map<std::string, bool> isHighLight;
 
 public:
     std::vector<float> boundingBoxArray;

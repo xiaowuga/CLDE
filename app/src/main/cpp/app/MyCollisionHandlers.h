@@ -54,6 +54,7 @@ namespace MyCollisionHandlers {
         MakeMyCollisionHandler(Stick)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
             LOGI("Collision detected between %s and %s", obj1->modelName.c_str(), obj2->modelName.c_str());
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
@@ -62,7 +63,7 @@ namespace MyCollisionHandlers {
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
             }
-            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+
             int allSateSize = animationSate->allStates.size();
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
@@ -110,7 +111,7 @@ namespace MyCollisionHandlers {
         MakeMyCollisionHandler(Button)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
             std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
-
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
@@ -137,7 +138,7 @@ namespace MyCollisionHandlers {
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
             }
-            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+
             int allSateSize = animationSate->allStates.size();
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
@@ -177,10 +178,12 @@ namespace MyCollisionHandlers {
     public:
         MakeMyCollisionHandler(ProtectiveCover)
         bool is_open() {
+            LOGI("IS_OPEN STATE IS ");
             //return animator->allStates[animator->currentStateIndex] == "OPEN";
             return animationState->allStates[currentStateIndex] == "OPEN";
         }
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
+            animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
             std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName
                       << std::endl;
 
@@ -224,7 +227,7 @@ namespace MyCollisionHandlers {
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
             }
-            animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+
             int allSateSize = animationState->allStates.size();
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
@@ -272,7 +275,7 @@ namespace MyCollisionHandlers {
         MakeMyCollisionHandler(ButtonUnderCover)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
             std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
-
+            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
@@ -325,7 +328,7 @@ namespace MyCollisionHandlers {
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
             }
-            auto animationSate = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+
             int allSateSize = animationSate->allStates.size();
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;
@@ -391,7 +394,7 @@ namespace MyCollisionHandlers {
         MakeMyCollisionHandler(Dial)
         void OnCollision(std::shared_ptr<CollisionData> obj1, std::shared_ptr<CollisionData> obj2, FrameDataPtr _frameDataPtr, AppData* appDataPtr, SceneData& sceneData) override {
             std::cout << "Collision detected between " << obj1->modelName << " and " << obj2->modelName << std::endl;
-
+            auto animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
             if (trigger_interval() < cool_down_interval) {
                 return;
             }
@@ -431,7 +434,7 @@ namespace MyCollisionHandlers {
             if(!animationPlaying){
                 currentStateIndex = obj2->originStateIndex;
             }
-            auto animationState = cadDataManager::DataInterface::getAnimationStateByName(obj2->modelName, obj2->instanceName);
+
             int allSateSize = animationState->allStates.size();
             // get gesture here and set animator state by gesture
             auto cur_right_hand_gesture = _frameDataPtr->gestureDataPtr->curRGesture;

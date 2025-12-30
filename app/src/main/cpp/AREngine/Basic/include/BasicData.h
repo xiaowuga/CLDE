@@ -660,6 +660,7 @@ public:
 
     bool isLoadMap;
     bool isSaveMap;
+    bool isBuildMap;
     bool isCaptureOfflineData;
     bool updateMarkerPoseInMap;
 

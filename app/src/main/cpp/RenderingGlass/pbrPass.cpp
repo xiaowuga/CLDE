@@ -8,7 +8,7 @@
 #include "shadowMappingDepthPass.h"
 #include "SSAOPass.h"
 
-#define ENABLE_SSAO 1
+#define ENABLE_SSAO 0
 PbrPass::PbrPass() : TemplatePass() {}
 
 PbrPass::~PbrPass() {}
@@ -201,7 +201,7 @@ bool PbrPass::render(const glm::mat4& p, const glm::mat4& v, const glm::mat4& m)
     mShader.setUniformBool("useMetallicMap",true);
     mShader.setUniformBool("useRoughnessMap",true);
     mShader.setUniformBool("useAoMap",true);
-    mShader.setUniformBool("lightChange", lightChange);
+//    mShader.setUniformBool("lightChange", false);
     // floor
 //    auto planeVAO = shadowPass->getPlaneVao();
 //    model = glm::mat4(1.0f);

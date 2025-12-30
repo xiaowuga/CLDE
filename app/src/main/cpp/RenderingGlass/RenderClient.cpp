@@ -3,7 +3,6 @@
 //
 
 #include "RenderClient.h"
-#include <android/log.h>
 #include <fstream>
 #include <jni.h>
 #include"opencv2/core.hpp"
@@ -11,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 #include <utility>
 
+#include <android/log.h>
 #define LOG_TAG "RenderClient.cpp"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define HAND_JOINT_COUNT 16
@@ -125,8 +125,24 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
                 quaternionArray = anKeyframe.quaternionArray;
             }
         }
-        //高亮模型
-        highlightInstance(modelName, instanceId);
+        // 检查key是否存在，不存在则添加，默认值为false
+        // find 方法返回迭代器，end() 表示未找到
+        if (isHighLight.find(instanceName) == isHighLight.end()) {
+            isHighLight[instanceName] = false; // 新增键值对，默认false
+            //高亮模型
+            highlightInstance(modelName, instanceId);
+            // 将该key对应的值改为true
+            // 此时key必定存在（不存在已在上一步添加），直接赋值即可
+            isHighLight[instanceName] = true;
+        }
+        else if(isHighLight[instanceName] == false){
+            //高亮模型
+            highlightInstance(modelName, instanceId);
+            // 将该key对应的值改为true
+            // 此时key必定存在（不存在已在上一步添加），直接赋值即可
+            isHighLight[instanceName] = true;
+        }
+
     }
 
 //    {//测试接口用代码，推力杆会动
@@ -154,7 +170,7 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 
     //调用位姿变换接口，实时更新模型位置
     if (positionArray.size() != 0) {
-        LOGI("找到positionArray");
+        LOGI("找到positionArray， %s", modelName.c_str());
         actionFrame ++;
 //        LOGI("%i", actionFrame);
         std::vector<float> position   = { positionArray[actionFrame * 3], positionArray[actionFrame * 3 + 1], positionArray[actionFrame * 3 + 2] };
@@ -166,6 +182,7 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 //        //测试高亮的接口，需要把restoreInstanceColor给注释掉
 //        highlightInstance(modelName, instanceId);
         cadDataManager::DataInterface::restoreInstanceColor(instanceId);//零件实例高亮的恢复
+        isHighLight[instanceName] = false;
 //        cadDataManager::DataInterface::modifyInstanceColor(instanceId, "#FF0000");//零件实例高亮的修改
         modifyModel = cadDataManager::DataInterface::modifyInstanceMatrix(instanceId, matrix);//零件实例位置的修改
 
@@ -173,17 +190,27 @@ int RenderClient::Update(AppData& appData, SceneData& sceneData, FrameDataPtr fr
 
         if((actionFrame * 3 + 3) == positionArray.size()){
             actionFrame = -1;
+            sceneData.actionLock.lock();
             sceneData.actionPassage.clear();
             positionArray.clear();
             quaternionArray.clear();
-            sceneData.actionLock.try_lock();
             sceneData.actionLock.unlock();
         }
     }
+//    else if(isHighLight[instanceName])
+//    {
+//        if(sceneData.actionLock.try_lock()){
+//            actionFrame = -1;
+//            sceneData.actionPassage.clear();
+//            positionArray.clear();
+//            quaternionArray.clear();
+//            sceneData.actionLock.unlock();
+//        }
+//    }
 
     mModel->render(project,view,model_trans_mat);
     mGizmoPass->updateBoundingBOX(boundingBoxArray);
-    mGizmoPass->render(project, view);
+//    mGizmoPass->render(project, view);
     mPbrPass->render(project, view, joc);
 
     wchar_t text[1024] = {0};
